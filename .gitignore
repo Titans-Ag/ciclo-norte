@@ -31,6 +31,10 @@ dist/
 .vscode/
 .idea/
 
+# Binários
+/ciclo-norte-server
+ciclo-norte-server
+
 # Logs
 logs/
 *.log
