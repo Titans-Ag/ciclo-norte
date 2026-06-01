@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ciclo-norte-postgres
+    environment:
+      POSTGRES_USER: ciconorte
+      POSTGRES_PASSWORD: ciconorte123
+      POSTGRES_DB: ciconorte
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./go/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ciconorte -d ciconorte"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
