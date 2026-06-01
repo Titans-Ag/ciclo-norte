@@ -1,5 +1,7 @@
 'use client';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085';
+
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -54,7 +56,7 @@ function MessageBubble({ msg }: { msg: Message }) {
     <div className={`flex flex-col ${align} mb-3`}>
       <div className="mb-0.5 text-xs text-gray-500">
         <span className="font-medium">{msg.autor_nome}</span>{' '}
-        <span className="text-gray-400">{timeAgo(msg.timestamp)}</span>
+        <span className="text-gray-400">{timeAgo(msg.enviada_em || msg.created_at)}</span>
       </div>
 
       <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm md:max-w-[60%] ${bubbleBg}`}>
@@ -64,9 +66,9 @@ function MessageBubble({ msg }: { msg: Message }) {
 
         {msg.tipo_midia === 'imagem' && (
           <div className="space-y-1">
-            {msg.media_url && (
+            {msg.midia_url && (
               <img
-                src={msg.media_url}
+                src={msg.midia_url}
                 alt={msg.descricao_imagem || 'Imagem'}
                 className="max-h-48 rounded-lg object-cover"
               />
@@ -90,10 +92,10 @@ function MessageBubble({ msg }: { msg: Message }) {
               )}
               {playing ? 'Pausar' : 'Ouvir áudio'}
             </button>
-            {msg.media_url && (
+            {msg.midia_url && (
               <audio
                 ref={audioRef}
-                src={msg.media_url}
+                src={msg.midia_url}
                 onEnded={handleEnded}
                 className="hidden"
               />
@@ -191,7 +193,7 @@ function ChatContent() {
   const handleAction = async (action: string, body?: unknown) => {
     setActionLoading(action);
     try {
-      const res = await fetch(`http://localhost:8085/api/conversations/${conversaId}/${action}`, {
+      const res = await fetch(`${API_BASE}/api/conversations/${conversaId}/${action}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -268,7 +270,7 @@ function ChatContent() {
             </button>
           )}
 
-          {conversation?.status === 'humano_assumiu' && (
+          {conversation?.status === 'humano' && (
             <>
               <button
                 onClick={() => handleAction('devolver')}
@@ -289,7 +291,7 @@ function ChatContent() {
             </>
           )}
 
-          {(conversation?.status === 'humano_assumiu' || conversation?.status === 'transferida') && (
+          {(conversation?.status === 'humano' || conversation?.status === 'transferida') && (
             <button
               onClick={() => handleAction('resolver')}
               disabled={!!actionLoading}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { SSEEvent } from '@/types';
 
-const API_BASE = 'http://localhost:8085';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085';
 const RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 15000];
 
 export function useSSE(token: string | null) {
@@ -60,13 +60,15 @@ export function useSSE(token: string | null) {
         if (!pollInterval.current) {
           pollInterval.current = setInterval(() => {
             if (!mounted.current) return;
-            fetch(`${API_BASE}/api/conversations/poll`, {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            })
+            fetch(`${API_BASE}/api/events/poll?token=${encodeURIComponent(token)}`)
               .then((r) => (r.ok ? r.json() : null))
               .then((data) => {
-                if (data && mounted.current) {
-                  setLastEvent({ type: 'conversation_update', payload: data });
+                if (data && data.events && mounted.current) {
+                  // pick the most recent event
+                  const ev = data.events[data.events.length - 1];
+                  if (ev) {
+                    setLastEvent({ type: ev.type || 'conversation_update', payload: ev.payload || ev });
+                  }
                 }
               })
               .catch(() => {});

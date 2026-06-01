@@ -1,8 +1,8 @@
 -- Seed Ciclo Norte MVP
 -- Lojas
-INSERT INTO loja (id, slug, nome, descricao) VALUES
-('11111111-1111-1111-1111-111111111111', 'vendas', 'Vendas', 'Venda de ferramentas e equipamentos'),
-('22222222-2222-2222-2222-222222222222', 'locacao', 'Locação', 'Locação de ferramentas e equipamentos');
+INSERT INTO loja (id, slug, nome, descricao, tipo, endereco, telefone) VALUES
+('11111111-1111-1111-1111-111111111111', 'vendas', 'Vendas', 'Venda de ferramentas e equipamentos', 'vendas', 'Rua das Ferramentas, 100', '5511999999901'),
+('22222222-2222-2222-2222-222222222222', 'locacao', 'Locação', 'Locação de ferramentas e equipamentos', 'locacao', 'Rua das Ferramentas, 200', '5511999999902');
 
 -- Instância WhatsApp (1 instância compartilhada para demonstração)
 INSERT INTO instancia_whatsapp (id, loja_id, nome, evolution_instance_name, numero_telefone, evolution_base_url, status) VALUES
@@ -10,10 +10,10 @@ INSERT INTO instancia_whatsapp (id, loja_id, nome, evolution_instance_name, nume
 
 -- Atendentes (senha: 'senha123' — bcrypt hash)
 INSERT INTO atendente (id, email, nome, senha_hash, role) VALUES
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'admin@ciclonorte.com', 'Administrador', '$2a$12$abcdefghijklmnopqrstuuxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'admin'),
-('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'joao@ciclonorte.com', 'João Silva', '$2a$12$abcdefghijklmnopqrstuuxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'atendente'),
-('cccccccc-cccc-cccc-cccc-cccccccccccc', 'maria@ciclonorte.com', 'Maria Souza', '$2a$12$abcdefghijklmnopqrstuuxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'atendente'),
-('dddddddd-dddd-dddd-dddd-dddddddddddd', 'pedro@ciclonorte.com', 'Pedro Santos', '$2a$12$abcdefghijklmnopqrstuuxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'atendente');
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'admin@ciclonorte.com', 'Administrador', '$2a$12$mLKsryZAqHD3KO.LZulNx.FGEyu.YAZP6ILDk/K4joYOOszcPtto.', 'admin'),
+('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'joao@ciclonorte.com', 'João Silva', '$2a$12$mLKsryZAqHD3KO.LZulNx.FGEyu.YAZP6ILDk/K4joYOOszcPtto.', 'atendente'),
+('cccccccc-cccc-cccc-cccc-cccccccccccc', 'maria@ciclonorte.com', 'Maria Souza', '$2a$12$mLKsryZAqHD3KO.LZulNx.FGEyu.YAZP6ILDk/K4joYOOszcPtto.', 'atendente'),
+('dddddddd-dddd-dddd-dddd-dddddddddddd', 'pedro@ciclonorte.com', 'Pedro Santos', '$2a$12$mLKsryZAqHD3KO.LZulNx.FGEyu.YAZP6ILDk/K4joYOOszcPtto.', 'atendente');
 
 -- Alocações
 INSERT INTO atendente_loja (atendente_id, loja_id, alocado_por) VALUES
@@ -29,8 +29,8 @@ INSERT INTO agente (id, loja_id, slug, nome, descricao, tipo, prompt_sistema, mo
 
 -- Agentes de Apoio
 INSERT INTO agente (id, loja_id, slug, nome, descricao, tipo, prompt_sistema, modelo, temperatura, max_tokens, multimodal) VALUES
-('gggggggg-gggg-gggg-gggg-gggggggggggg', '11111111-1111-1111-1111-111111111111', 'consulta-preco', 'Consulta Preços', 'Consulta preços e estoque', 'apoio', 'Você recebe nome de produto e retorna preço e disponibilidade em JSON.', 'gpt-4o-mini', 0.0, 500, false),
-('hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhhhhhh', '22222222-2222-2222-2222-222222222222', 'consulta-preco', 'Consulta Preços Locação', 'Consulta preços de locação', 'apoio', 'Você recebe nome de produto e retorna preço de locação diária e disponibilidade.', 'gpt-4o-mini', 0.0, 500, false);
+('77777777-7777-7777-7777-777777777777', '11111111-1111-1111-1111-111111111111', 'consulta-preco', 'Consulta Preços', 'Consulta preços e estoque', 'apoio', 'Você recebe nome de produto e retorna preço e disponibilidade em JSON.', 'gpt-4o-mini', 0.0, 500, false),
+('88888888-8888-8888-8888-888888888888', '22222222-2222-2222-2222-222222222222', 'consulta-preco', 'Consulta Preços Locação', 'Consulta preços de locação', 'apoio', 'Você recebe nome de produto e retorna preço de locação diária e disponibilidade.', 'gpt-4o-mini', 0.0, 500, false);
 
 -- Tools habilitadas
 INSERT INTO agente_tool (agente_id, tool_slug, tool_config) VALUES

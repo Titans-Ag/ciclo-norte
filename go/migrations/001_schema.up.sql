@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS loja (
     slug TEXT NOT NULL UNIQUE,
     nome TEXT NOT NULL,
     descricao TEXT,
+    tipo TEXT,
+    endereco TEXT,
+    telefone TEXT,
     ativo BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

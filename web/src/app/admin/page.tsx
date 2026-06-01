@@ -23,7 +23,7 @@ import {
 
 type Tab = 'lojas' | 'atendentes' | 'agente' | 'fluxo' | 'whatsapp';
 
-const API_BASE = 'http://localhost:8085';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085';
 
 export default function AdminPage() {
   const { token, isAdmin } = useAuth();
@@ -230,7 +230,7 @@ function AtendentesPanel({ token }: { token: string | null }) {
   const [lojas, setLojas] = useState<Loja[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<Atendente | null>(null);
-  const [form, setForm] = useState({ nome: '', email: '', is_admin: false });
+  const [form, setForm] = useState({ nome: '', email: '', role: 'atendente' as 'admin' | 'atendente' });
   const [alocacoes, setAlocacoes] = useState<Record<string, string[]>>({});
 
   const fetchData = useCallback(async () => {
@@ -276,7 +276,7 @@ function AtendentesPanel({ token }: { token: string | null }) {
         body: JSON.stringify(form),
       });
       if (res.ok) {
-        setForm({ nome: '', email: '', is_admin: false });
+        setForm({ nome: '', email: '', role: 'atendente' });
         setEditing(null);
         fetchData();
       }
@@ -335,8 +335,8 @@ function AtendentesPanel({ token }: { token: string | null }) {
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              checked={form.is_admin}
-              onChange={(e) => setForm((f) => ({ ...f, is_admin: e.target.checked }))}
+              checked={form.role === 'admin'}
+              onChange={(e) => setForm((f) => ({ ...f, role: e.target.checked ? 'admin' : 'atendente' }))}
             />
             Administrador
           </label>
@@ -351,7 +351,7 @@ function AtendentesPanel({ token }: { token: string | null }) {
           </button>
           {editing && (
             <button
-              onClick={() => { setEditing(null); setForm({ nome: '', email: '', is_admin: false }); }}
+              onClick={() => { setEditing(null); setForm({ nome: '', email: '', role: 'atendente' }); }}
               className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
             >
               <X className="h-4 w-4" />
@@ -368,11 +368,11 @@ function AtendentesPanel({ token }: { token: string | null }) {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium text-gray-900">{at.nome}</div>
-                <div className="text-xs text-gray-500">{at.email} {at.is_admin && '• Admin'}</div>
+                <div className="text-xs text-gray-500">{at.email} {at.role === 'admin' && '• Admin'}</div>
               </div>
               <div className="flex gap-1">
                 <button
-                  onClick={() => { setEditing(at); setForm({ nome: at.nome, email: at.email, is_admin: at.is_admin }); }}
+                  onClick={() => { setEditing(at); setForm({ nome: at.nome, email: at.email, role: at.role }); }}
                   className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
                 >
                   <Edit3 className="h-4 w-4" />
@@ -411,7 +411,7 @@ function AtendentesPanel({ token }: { token: string | null }) {
 function AgentePanel({ token }: { token: string | null }) {
   const [config, setConfig] = useState<AgenteConfig>({
     nome: 'Principal',
-    prompt: '',
+    prompt_sistema: '',
     modelo: 'gpt-4o-mini',
     temperatura: 0.7,
     tools: [],
@@ -479,8 +479,8 @@ function AgentePanel({ token }: { token: string | null }) {
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Prompt do Sistema</label>
           <textarea
-            value={config.prompt}
-            onChange={(e) => setConfig((c) => ({ ...c, prompt: e.target.value }))}
+            value={config.prompt_sistema}
+            onChange={(e) => setConfig((c) => ({ ...c, prompt_sistema: e.target.value }))}
             rows={6}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
           />

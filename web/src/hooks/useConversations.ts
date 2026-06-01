@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Conversation, Message } from '@/types';
 
-const API_BASE = 'http://localhost:8085';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085';
 
 export function useConversations(token: string | null) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -23,8 +23,8 @@ export function useConversations(token: string | null) {
     try {
       const res = await fetch(`${API_BASE}/api/conversations`, { headers: headers() });
       if (!res.ok) throw new Error('Erro ao carregar conversas');
-      const data: Conversation[] = await res.json();
-      setConversations(data);
+      const data = await res.json();
+      setConversations(data.conversations || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro desconhecido');
     } finally {
@@ -40,11 +40,12 @@ export function useConversations(token: string | null) {
     async (conversaId: string): Promise<Message[]> => {
       if (!token) return [];
       try {
-        const res = await fetch(`${API_BASE}/api/conversations/${conversaId}/messages`, {
+        const res = await fetch(`${API_BASE}/api/conversations/${conversaId}`, {
           headers: headers(),
         });
         if (!res.ok) return [];
-        return await res.json();
+        const data = await res.json();
+        return data.mensagens || [];
       } catch {
         return [];
       }
@@ -59,7 +60,7 @@ export function useConversations(token: string | null) {
         const res = await fetch(`${API_BASE}/api/conversations/${conversaId}/messages`, {
           method: 'POST',
           headers: headers(),
-          body: JSON.stringify({ conteudo, tipo_midia: 'texto' }),
+          body: JSON.stringify({ conteudo, midia_tipo: 'text' }),
         });
         return res.ok;
       } catch {

@@ -10,7 +10,7 @@ import { timeAgo } from '@/lib/time';
 import { Conversation, ConversationStatus, SSEEvent } from '@/types';
 import { Search, RefreshCw, ArrowLeftRight, Wifi, WifiOff, Loader2 } from 'lucide-react';
 
-const ALL_STATUSES: ConversationStatus[] = ['ia_ativa', 'humano_assumiu', 'transferida', 'resolvida'];
+const ALL_STATUSES: ConversationStatus[] = ['ia_ativa', 'humano', 'transferida', 'resolvida'];
 
 export default function ConversationsPage() {
   const { token, user } = useAuth();
@@ -53,7 +53,7 @@ export default function ConversationsPage() {
   const lojas = useMemo(() => {
     const map = new Map<string, string>();
     conversations.forEach((c) => {
-      if (c.loja_id && c.loja_nome) map.set(c.loja_id, c.loja_nome);
+      if (c.loja_responsavel_id && c.loja_nome) map.set(c.loja_responsavel_id, c.loja_nome);
     });
     return Array.from(map.entries());
   }, [conversations]);
@@ -62,11 +62,11 @@ export default function ConversationsPage() {
     return conversations.filter((c) => {
       const matchesSearch =
         search.trim().length === 0 ||
-        c.cliente_nome.toLowerCase().includes(search.toLowerCase()) ||
+        (c.cliente_nome?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
         c.cliente_telefone.includes(search) ||
-        (c.ultima_mensagem_preview && c.ultima_mensagem_preview.toLowerCase().includes(search.toLowerCase()));
+        (c.ultima_mensagem?.toLowerCase().includes(search.toLowerCase()) ?? false);
       const matchesStatus = statusFilter === 'todos' || c.status === statusFilter;
-      const matchesLoja = lojaFilter === 'todas' || c.loja_id === lojaFilter;
+      const matchesLoja = lojaFilter === 'todas' || c.loja_responsavel_id === lojaFilter;
       return matchesSearch && matchesStatus && matchesLoja;
     });
   }, [conversations, search, statusFilter, lojaFilter]);
@@ -115,7 +115,7 @@ export default function ConversationsPage() {
           {ALL_STATUSES.map((s) => (
             <option key={s} value={s}>
               {s === 'ia_ativa' && 'IA Ativa'}
-              {s === 'humano_assumiu' && 'Humano'}
+              {s === 'humano' && 'Humano'}
               {s === 'transferida' && 'Transferida'}
               {s === 'resolvida' && 'Resolvida'}
             </option>
@@ -174,9 +174,9 @@ export default function ConversationsPage() {
                     )}
                     <span className="text-xs text-gray-400">{c.loja_nome}</span>
                   </div>
-                  {c.ultima_mensagem_preview && (
+                  {c.ultima_mensagem && (
                     <p className="mt-1 truncate text-xs text-gray-500">
-                      {c.ultima_mensagem_preview}
+                      {c.ultima_mensagem}
                     </p>
                   )}
                 </div>

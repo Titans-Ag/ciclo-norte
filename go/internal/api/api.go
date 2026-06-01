@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Titans-Ag/ciclo-norte/internal/admin"
 	"github.com/Titans-Ag/ciclo-norte/internal/agent"
 	"github.com/Titans-Ag/ciclo-norte/internal/auth"
 	"github.com/Titans-Ag/ciclo-norte/internal/config"
 	"github.com/Titans-Ag/ciclo-norte/internal/conversation"
+	"github.com/Titans-Ag/ciclo-norte/internal/db"
 	"github.com/Titans-Ag/ciclo-norte/internal/evolution"
 	"github.com/Titans-Ag/ciclo-norte/internal/sse"
 )
@@ -17,6 +19,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 	mux := http.NewServeMux()
 
 	jwtMW := auth.JWTMiddleware(cfg.JWTSecret)
+	sse.JWTSecret = cfg.JWTSecret
 
 	// Health check
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -37,9 +40,12 @@ func NewRouter(cfg *config.Config) http.Handler {
 			writeError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
+		var nome string
+		_ = db.Pool.QueryRow(r.Context(), `SELECT nome FROM atendente WHERE id = $1`, claims.UserID).Scan(&nome)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"id":    claims.UserID,
 			"email": claims.Email,
+			"nome":  nome,
 			"role":  claims.Role,
 		})
 	})))
@@ -77,10 +83,26 @@ func NewRouter(cfg *config.Config) http.Handler {
 		writeJSON(w, http.StatusOK, result)
 	})))
 
-	// SSE events endpoint (protected)
-	mux.Handle("GET /api/events", jwtMW(http.HandlerFunc(sse.Handler)))
-	// Polling fallback (protected)
-	mux.Handle("GET /api/events/poll", jwtMW(http.HandlerFunc(sse.PollingHandler)))
+	// SSE events endpoint (token via query param for EventSource compatibility)
+	mux.HandleFunc("GET /api/events", sse.Handler)
+	// Polling fallback
+	mux.HandleFunc("GET /api/events/poll", sse.PollingHandler)
+
+	// Admin routes (protected + admin only)
+	mux.Handle("GET /api/lojas", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.ListLojas))))
+	mux.Handle("POST /api/lojas", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.CreateLoja))))
+	mux.Handle("PUT /api/lojas/{id}", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.UpdateLoja))))
+	mux.Handle("DELETE /api/lojas/{id}", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.DeleteLoja))))
+
+	mux.Handle("GET /api/atendentes", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.ListAtendentes))))
+	mux.Handle("POST /api/atendentes", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.CreateAtendente))))
+	mux.Handle("PUT /api/atendentes/{id}", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.UpdateAtendente))))
+	mux.Handle("POST /api/atendentes/{id}/lojas", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.ToggleAtendenteLoja))))
+
+	mux.Handle("GET /api/admin/agent-config", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.GetAgentConfig))))
+	mux.Handle("PUT /api/admin/agent-config", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.UpdateAgentConfig))))
+	mux.Handle("GET /api/admin/whatsapp-status", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.ListWhatsAppInstances))))
+	mux.Handle("POST /api/admin/whatsapp-status/{id}/reconnect", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.ReconnectWhatsApp))))
 
 	// Webhook routes (public, called by Evolution)
 	webhookHandler := evolution.NewHandler(cfg)
