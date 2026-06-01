@@ -9,6 +9,7 @@ import (
 
 	"github.com/Titans-Ag/ciclo-norte/internal/auth"
 	"github.com/Titans-Ag/ciclo-norte/internal/db"
+	"github.com/Titans-Ag/ciclo-norte/internal/sse"
 	"github.com/google/uuid"
 )
 
@@ -241,6 +242,15 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sse.PublishNovaMensagem(conv.LojaResponsavelID, map[string]any{
+		"conversa_id": conv.ID,
+		"mensagem_id": msg.ID,
+		"autor_tipo":  msg.AutorTipo,
+		"autor_nome":  msg.AutorNome,
+		"conteudo":    msg.Conteudo,
+		"midia_tipo":  msg.MidiaTipo,
+	})
+
 	writeJSON(w, http.StatusCreated, msg)
 }
 
@@ -286,6 +296,12 @@ func (h *Handler) Assumir(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to update conversation")
 		return
 	}
+
+	sse.PublishAtendenteAssumiu(conv.LojaResponsavelID, map[string]any{
+		"conversa_id":  conv.ID,
+		"atendente_id": claims.UserID,
+		"status":       "humano",
+	})
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":       "humano",
@@ -335,6 +351,11 @@ func (h *Handler) Devolver(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to update conversation")
 		return
 	}
+
+	sse.PublishStatusMudou(conv.LojaResponsavelID, map[string]any{
+		"conversa_id": conv.ID,
+		"status":      "ia_ativa",
+	})
 
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ia_ativa"})
 }
@@ -411,8 +432,15 @@ func (h *Handler) Transferir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sse.PublishConversaTransferida(req.LojaDestinoID, map[string]any{
+		"conversa_id":     conv.ID,
+		"loja_origem_id":  origemID,
+		"loja_destino_id": req.LojaDestinoID,
+		"status":          "ia_ativa",
+	})
+
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":            "ia_ativa",
+		"status":              "ia_ativa",
 		"loja_responsavel_id": req.LojaDestinoID,
 	})
 }
@@ -458,6 +486,11 @@ func (h *Handler) Resolver(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to update conversation")
 		return
 	}
+
+	sse.PublishStatusMudou(conv.LojaResponsavelID, map[string]any{
+		"conversa_id": conv.ID,
+		"status":      "resolvida",
+	})
 
 	writeJSON(w, http.StatusOK, map[string]any{"status": "resolvida"})
 }

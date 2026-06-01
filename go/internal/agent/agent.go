@@ -14,12 +14,13 @@ import (
 	"github.com/Titans-Ag/ciclo-norte/internal/config"
 	"github.com/Titans-Ag/ciclo-norte/internal/conversation"
 	"github.com/Titans-Ag/ciclo-norte/internal/db"
+	"github.com/Titans-Ag/ciclo-norte/internal/sse"
 	"github.com/google/uuid"
 )
 
 // ProcessConversation processes an inbound message through the AI agent.
-// It loads the active agent for the store, builds context, calls OpenAI,
-// saves the agent response as a message, and optionally sends via Evolution.
+// It reuses ProcessMessage so the webhook flow gets the same tool-calling
+// pipeline as the manual agent endpoint.
 func ProcessConversation(ctx context.Context, cfg *config.Config, convID uuid.UUID, inboundMsg *conversation.Mensagem) error {
 	// Load conversation with store/agent context
 	conv, err := conversation.GetByID(ctx, convID)
@@ -38,39 +39,90 @@ func ProcessConversation(ctx context.Context, cfg *config.Config, convID uuid.UU
 		return fmt.Errorf("agent: load agent: %w", err)
 	}
 
-	// Build recent message history (last 20)
-	msgs, err := conversation.ListMensagensRecentes(ctx, convID, 20)
+	// Handle multimodal inbound message (transcribe audio / describe image)
+	if inboundMsg != nil {
+		if inboundMsg.MidiaTipo == "audio" && inboundMsg.MidiaURL != nil && *inboundMsg.MidiaURL != "" && cfg.OpenAIAPIKey != "" {
+			audioBytes, err := downloadMedia(*inboundMsg.MidiaURL)
+			if err == nil && len(audioBytes) > 0 {
+				txt, err := TranscribeAudio(cfg.OpenAIAPIKey, audioBytes, "audio.ogg")
+				if err == nil {
+					_, _ = db.Pool.Exec(ctx, `UPDATE mensagem SET transcricao = $1 WHERE id = $2`, txt, inboundMsg.ID)
+					inboundMsg.Transcricao = &txt
+				}
+			}
+		}
+		if inboundMsg.MidiaTipo == "image" && inboundMsg.MidiaURL != nil && *inboundMsg.MidiaURL != "" && cfg.OpenAIAPIKey != "" {
+			imgBytes, err := downloadMedia(*inboundMsg.MidiaURL)
+			if err == nil && len(imgBytes) > 0 {
+				desc, err := DescribeImage(cfg.OpenAIAPIKey, imgBytes, agente.Modelo)
+				if err == nil {
+					_, _ = db.Pool.Exec(ctx, `UPDATE mensagem SET descricao_imagem = $1 WHERE id = $2`, desc, inboundMsg.ID)
+					inboundMsg.DescricaoImagem = &desc
+				}
+			}
+		}
+	}
+
+	// Build ProcessRequest from the already-saved inbound message
+	var req ProcessRequest
+	if inboundMsg != nil {
+		req = ProcessRequest{
+			ConversaID:    convID,
+			Conteudo:      ptrValue(inboundMsg.Conteudo),
+			MidiaTipo:     inboundMsg.MidiaTipo,
+			MidiaURL:      ptrValue(inboundMsg.MidiaURL),
+			AutorNome:     inboundMsg.AutorNome,
+			AutorTipo:     inboundMsg.AutorTipo,
+			WhatsappMsgID: ptrValue(inboundMsg.WhatsappMsgID),
+		}
+	} else {
+		req = ProcessRequest{ConversaID: convID}
+	}
+
+	result, err := ProcessMessage(ctx, cfg, req)
 	if err != nil {
-		return fmt.Errorf("agent: load messages: %w", err)
+		return fmt.Errorf("agent: process message: %w", err)
 	}
 
-	// Call OpenAI
-	reply, err := callOpenAIBasic(ctx, cfg, agente.PromptSistema, agente.Modelo, msgs)
-	if err != nil {
-		return fmt.Errorf("agent: openai call: %w", err)
+	// Broadcast SSE so frontend sees the agent response in real time
+	if result != nil {
+		sse.PublishNovaMensagem(conv.LojaResponsavelID, map[string]any{
+			"conversa_id": convID,
+			"mensagem_id": result.MensagemID,
+			"autor_tipo":  "agente",
+			"autor_nome":  agente.Nome,
+			"conteudo":    result.Resposta,
+			"midia_tipo":  "text",
+		})
+		if result.Transferiu {
+			sse.PublishConversaTransferida(conv.LojaResponsavelID, map[string]any{
+				"conversa_id":     convID,
+				"loja_destino_id": result.NovaLojaID,
+				"status":          "ia_ativa",
+			})
+		}
 	}
-
-	// Save agent response as message
-	agentMsg := &conversation.Mensagem{
-		ConversaID: convID,
-		AutorTipo:  "agente",
-		AutorID:    &agente.ID,
-		AutorNome:  agente.Nome,
-		Conteudo:   &reply,
-		MidiaTipo:  "text",
-	}
-	if _, err := conversation.CreateMensagem(ctx, agentMsg); err != nil {
-		return fmt.Errorf("agent: save response: %w", err)
-	}
-
-	// Log event
-	_ = conversation.LogEventoAgente(ctx, convID, agente.ID, "resposta_gerada", map[string]any{
-		"modelo":       agente.Modelo,
-		"resposta_len": len(reply),
-		"mensagem_id":  inboundMsg.ID,
-	})
 
 	return nil
+}
+
+func ptrValue(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func downloadMedia(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("download media: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("download media status %d", resp.StatusCode)
+	}
+	return io.ReadAll(resp.Body)
 }
 
 // openAIMessage is the chat message shape.
@@ -269,43 +321,59 @@ func ProcessMessage(ctx context.Context, cfg *config.Config, req ProcessRequest)
 		return nil, fmt.Errorf("agent not found: %w", err)
 	}
 
-	// 3. Save incoming user message first
+	// 3. Save incoming user message first (skip if already present via WhatsappMsgID)
 	msgID := uuid.New()
 	var transcricao, descricaoImagem *string
-	if req.MidiaTipo == "audio" && len(req.MidiaBytes) > 0 {
-		txt, err := TranscribeAudio(cfg.OpenAIAPIKey, req.MidiaBytes, "audio.ogg")
-		if err != nil {
-			transcricao = strPtr("(erro na transcrição: " + err.Error() + ")")
-		} else {
-			transcricao = &txt
+	skipSave := false
+	if req.WhatsappMsgID != "" {
+		existing, _ := conversation.GetMensagemByWhatsappID(ctx, req.WhatsappMsgID)
+		if existing != nil {
+			msgID = existing.ID
+			if existing.Transcricao != nil {
+				transcricao = existing.Transcricao
+			}
+			if existing.DescricaoImagem != nil {
+				descricaoImagem = existing.DescricaoImagem
+			}
+			skipSave = true
 		}
-	}
-	if req.MidiaTipo == "image" && len(req.MidiaBytes) > 0 {
-		desc, err := DescribeImage(cfg.OpenAIAPIKey, req.MidiaBytes, agente.Modelo)
-		if err != nil {
-			descricaoImagem = strPtr("(erro na descrição: " + err.Error() + ")")
-		} else {
-			descricaoImagem = &desc
-		}
-	}
-	autorTipo := req.AutorTipo
-	if autorTipo == "" {
-		autorTipo = "cliente"
-	}
-	autorNome := req.AutorNome
-	if autorNome == "" {
-		autorNome = "Cliente"
-	}
-	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO mensagem (id, conversa_id, autor_tipo, autor_id, autor_nome, conteudo, midia_tipo, midia_url, transcricao, descricao_imagem, whatsapp_msg_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	`, msgID, req.ConversaID, autorTipo, req.AutorID, autorNome, req.Conteudo, req.MidiaTipo, req.MidiaURL, transcricao, descricaoImagem, req.WhatsappMsgID)
-	if err != nil {
-		return nil, fmt.Errorf("save user message: %w", err)
 	}
 
-	// Update conversa ultima_msg_em
-	_, _ = db.Pool.Exec(ctx, `UPDATE conversa SET ultima_msg_em = now() WHERE id = $1`, req.ConversaID)
+	if !skipSave {
+		if req.MidiaTipo == "audio" && len(req.MidiaBytes) > 0 {
+			txt, err := TranscribeAudio(cfg.OpenAIAPIKey, req.MidiaBytes, "audio.ogg")
+			if err != nil {
+				transcricao = strPtr("(erro na transcrição: " + err.Error() + ")")
+			} else {
+				transcricao = &txt
+			}
+		}
+		if req.MidiaTipo == "image" && len(req.MidiaBytes) > 0 {
+			desc, err := DescribeImage(cfg.OpenAIAPIKey, req.MidiaBytes, agente.Modelo)
+			if err != nil {
+				descricaoImagem = strPtr("(erro na descrição: " + err.Error() + ")")
+			} else {
+				descricaoImagem = &desc
+			}
+		}
+		autorTipo := req.AutorTipo
+		if autorTipo == "" {
+			autorTipo = "cliente"
+		}
+		autorNome := req.AutorNome
+		if autorNome == "" {
+			autorNome = "Cliente"
+		}
+		_, err := db.Pool.Exec(ctx, `
+			INSERT INTO mensagem (id, conversa_id, autor_tipo, autor_id, autor_nome, conteudo, midia_tipo, midia_url, transcricao, descricao_imagem, whatsapp_msg_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		`, msgID, req.ConversaID, autorTipo, req.AutorID, autorNome, req.Conteudo, req.MidiaTipo, req.MidiaURL, transcricao, descricaoImagem, req.WhatsappMsgID)
+		if err != nil {
+			return nil, fmt.Errorf("save user message: %w", err)
+		}
+		// Update conversa ultima_msg_em
+		_, _ = db.Pool.Exec(ctx, `UPDATE conversa SET ultima_msg_em = now() WHERE id = $1`, req.ConversaID)
+	}
 
 	// 4. Build messages for LLM
 	history, err := loadHistoryForLLM(ctx, req.ConversaID, 20)
@@ -440,6 +508,12 @@ func ProcessMessage(ctx context.Context, cfg *config.Config, req ProcessRequest)
 				INSERT INTO transferencia (conversa_id, tipo, loja_origem_id, loja_destino_id, agente_id, motivo)
 				VALUES ($1, 'automatica', $2, $3, $4, 'Transferencia solicitada pelo agente')
 			`, req.ConversaID, lojaID, novaLoja, agente.ID)
+			sse.PublishConversaTransferida(lojaID, map[string]any{
+				"conversa_id":     req.ConversaID,
+				"loja_origem_id":  lojaID,
+				"loja_destino_id": novaLoja,
+				"status":          "ia_ativa",
+			})
 			return &ProcessResult{
 				Resposta:   assistantMsg.Content,
 				MensagemID: uuid.Nil,
@@ -460,8 +534,16 @@ func ProcessMessage(ctx context.Context, cfg *config.Config, req ProcessRequest)
 	}
 	_, _ = db.Pool.Exec(ctx, `UPDATE conversa SET ultima_msg_em = now() WHERE id = $1`, req.ConversaID)
 
-	// 9. Log event
+	// 9. Log event + SSE broadcast
 	_ = conversation.LogEventoAgente(ctx, req.ConversaID, agente.ID, "resposta", map[string]any{"resposta": assistantMsg.Content})
+	sse.PublishNovaMensagem(lojaID, map[string]any{
+		"conversa_id": req.ConversaID,
+		"mensagem_id": respID,
+		"autor_tipo":  "agente",
+		"autor_nome":  agente.Nome,
+		"conteudo":    assistantMsg.Content,
+		"midia_tipo":  "text",
+	})
 
 	return &ProcessResult{
 		Resposta:   assistantMsg.Content,
