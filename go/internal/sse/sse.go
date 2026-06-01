@@ -1,6 +1,7 @@
 package sse
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +13,10 @@ import (
 	"github.com/Titans-Ag/ciclo-norte/internal/db"
 	"github.com/google/uuid"
 )
+
+// JWTSecret is set by the API layer so SSE handlers can validate tokens
+// from query parameters (EventSource cannot set Authorization headers).
+var JWTSecret string
 
 // Event represents a server-sent event.
 type Event struct {
@@ -173,9 +178,21 @@ func PublishAtendenteAssumiu(lojaID uuid.UUID, payload map[string]any) {
 
 // HTTP Handler --------------------------------------------------------------
 
+func claimsFromQuery(r *http.Request) *auth.Claims {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		return nil
+	}
+	claims, err := auth.ParseToken(JWTSecret, token)
+	if err != nil {
+		return nil
+	}
+	return claims
+}
+
 // Handler serves the SSE endpoint GET /api/events.
 func Handler(w http.ResponseWriter, r *http.Request) {
-	claims := auth.ClaimsFromContext(r.Context())
+	claims := claimsFromQuery(r)
 	if claims == nil {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
@@ -264,7 +281,7 @@ func writeEvent(w http.ResponseWriter, e Event) {
 
 // PollingHandler returns recent events as JSON (fallback when SSE fails).
 func PollingHandler(w http.ResponseWriter, r *http.Request) {
-	claims := auth.ClaimsFromContext(r.Context())
+	claims := claimsFromQuery(r)
 	if claims == nil {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
