@@ -46,20 +46,16 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-gray-200 bg-white px-3 py-2 md:px-4">
-        <h1 className="text-lg font-bold text-gray-900">Painel Administrativo</h1>
-      </div>
-
-      <div className="flex gap-1 overflow-x-auto border-b border-gray-200 bg-white px-2 py-2 md:px-4">
+    <div className="flex h-[calc(100dvh-56px)] flex-col">
+      <div className="flex gap-1 overflow-x-auto border-b border-industrial-pale/60 bg-white/80 px-3 py-2 backdrop-blur-sm md:px-4">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-150 ${
               activeTab === t.id
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-industrial-black text-white shadow-industrial'
+                : 'text-industrial-medium hover:bg-industrial-surface hover:text-industrial-dark'
             }`}
           >
             {t.icon}

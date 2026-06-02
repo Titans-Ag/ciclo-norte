@@ -83,6 +83,10 @@ export function useConversations(token: string | null) {
     });
   }, []);
 
+  const removeConversation = useCallback((id: string) => {
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
   return {
     conversations,
     loading,
@@ -92,5 +96,6 @@ export function useConversations(token: string | null) {
     sendMessage,
     updateConversation,
     addConversation,
+    removeConversation,
   };
 }

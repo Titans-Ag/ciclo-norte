@@ -17,6 +17,11 @@ import {
   SlidersHorizontal,
   MessageSquare,
   X,
+  ArrowDownAZ,
+  ArrowUpDown,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 
 const ALL_STATUSES: ConversationStatus[] = ['ia_ativa', 'humano', 'transferida', 'resolvida'];
@@ -29,6 +34,9 @@ const STATUS_LABELS: Record<ConversationStatus | 'todos', string> = {
   resolvida: 'Resolvida',
 };
 
+type SortField = 'updated' | 'name' | 'unread';
+type SortDir = 'asc' | 'desc';
+
 export default function ConversationsPage() {
   const { token, user } = useAuth();
   const {
@@ -38,6 +46,7 @@ export default function ConversationsPage() {
     fetchConversations,
     updateConversation,
     addConversation,
+    removeConversation,
   } = useConversations(token);
   const { connected, fallbackActive, lastEvent } = useSSE(token);
 
@@ -45,6 +54,8 @@ export default function ConversationsPage() {
   const [statusFilter, setStatusFilter] = useState<ConversationStatus | 'todos'>('todos');
   const [lojaFilter, setLojaFilter] = useState<string>('todas');
   const [showFilters, setShowFilters] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('updated');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   // apply SSE events
   useEffect(() => {
@@ -59,16 +70,51 @@ export default function ConversationsPage() {
       updateConversation(c);
     }
     if (ev.type === 'new_message' && ev.payload) {
-      // Payload is { conversa_id, message }; refresh list to get updated preview
       fetchConversations();
     }
     if (ev.type === 'transfer' && ev.payload) {
-      // Payload is transfer metadata; refresh list
       fetchConversations();
     }
     if (ev.type === 'status_change' && ev.payload) {
-      // Payload is status metadata; refresh list
       fetchConversations();
+    }
+  };
+
+  const handleCardAction = async (action: string, conv: Conversation) => {
+    if (!token) return;
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+    if (action === 'delete') {
+      if (!confirm('Excluir esta conversa permanentemente?')) return;
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085'}/api/conversations/${conv.id}`, { method: 'DELETE', headers });
+        if (res.ok) removeConversation(conv.id);
+      } catch { /* ignore */ }
+      return;
+    }
+
+    if (action === 'archive') {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085'}/api/conversations/${conv.id}/resolve`, { method: 'POST', headers });
+        if (res.ok) fetchConversations();
+      } catch { /* ignore */ }
+      return;
+    }
+
+    if (action === 'reopen') {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085'}/api/conversations/${conv.id}/devolver`, { method: 'POST', headers });
+        if (res.ok) fetchConversations();
+      } catch { /* ignore */ }
+      return;
+    }
+
+    if (action === 'take') {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085'}/api/conversations/${conv.id}/assumir`, { method: 'POST', headers });
+        if (res.ok) fetchConversations();
+      } catch { /* ignore */ }
+      return;
     }
   };
 
@@ -81,7 +127,7 @@ export default function ConversationsPage() {
   }, [conversations]);
 
   const filtered = useMemo(() => {
-    return conversations.filter((c) => {
+    let list = conversations.filter((c) => {
       const matchesSearch =
         search.trim().length === 0 ||
         (c.cliente_nome?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
@@ -91,23 +137,59 @@ export default function ConversationsPage() {
       const matchesLoja = lojaFilter === 'todas' || c.loja_responsavel_id === lojaFilter;
       return matchesSearch && matchesStatus && matchesLoja;
     });
-  }, [conversations, search, statusFilter, lojaFilter]);
+
+    // Sort
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sortField === 'updated') {
+        const aDate = a.ultima_msg_em || a.updated_at;
+        const bDate = b.ultima_msg_em || b.updated_at;
+        cmp = new Date(bDate).getTime() - new Date(aDate).getTime();
+      } else if (sortField === 'name') {
+        cmp = (a.cliente_nome || a.cliente_telefone).localeCompare(b.cliente_nome || b.cliente_telefone);
+      } else if (sortField === 'unread') {
+        cmp = (b.unread_count || 0) - (a.unread_count || 0);
+      }
+      return sortDir === 'asc' ? -cmp : cmp;
+    });
+
+    return list;
+  }, [conversations, search, statusFilter, lojaFilter, sortField, sortDir]);
 
   const totalUnread = useMemo(
     () => conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0),
     [conversations]
   );
 
+  const stats = useMemo(() => {
+    return {
+      ia: conversations.filter((c) => c.status === 'ia_ativa').length,
+      humano: conversations.filter((c) => c.status === 'humano').length,
+      resolvida: conversations.filter((c) => c.status === 'resolvida').length,
+      transferida: conversations.filter((c) => c.status === 'transferida').length,
+    };
+  }, [conversations]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortField(field);
+      setSortDir('desc');
+    }
+  };
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-[calc(100dvh-56px)] flex-col">
       {/* Header */}
-      <div className="border-b border-industrial-pale bg-white px-4 py-3 md:px-6 md:py-4">
-        <div className="flex items-center justify-between">
+      <div className="border-b border-industrial-pale/60 bg-white/80 px-4 py-3 backdrop-blur-sm md:px-6 md:py-4">
+        {/* Top row: title + stats */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h1 className="text-lg font-bold text-industrial-black md:text-xl">
               Conversas
             </h1>
-            <p className="text-xs text-industrial-medium">
+            <p className="mt-0.5 text-xs text-industrial-medium">
               {conversations.length} total{totalUnread > 0 && (
                 <span className="ml-1 font-semibold text-industrial-red">
                   • {totalUnread} não lidas
@@ -163,8 +245,65 @@ export default function ConversationsPage() {
           </div>
         </div>
 
+        {/* Stats chips */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setStatusFilter('ia_ativa')}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+              statusFilter === 'ia_ativa'
+                ? 'bg-industrial-yellow text-industrial-black'
+                : 'bg-industrial-surface text-industrial-medium border border-industrial-pale'
+            }`}
+          >
+            <AlertCircle className="h-3 w-3" />
+            IA Ativa {stats.ia > 0 && <span className="ml-0.5 font-bold">{stats.ia}</span>}
+          </button>
+          <button
+            onClick={() => setStatusFilter('humano')}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+              statusFilter === 'humano'
+                ? 'bg-industrial-blue text-white'
+                : 'bg-industrial-surface text-industrial-medium border border-industrial-pale'
+            }`}
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Humano {stats.humano > 0 && <span className="ml-0.5 font-bold">{stats.humano}</span>}
+          </button>
+          <button
+            onClick={() => setStatusFilter('transferida')}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+              statusFilter === 'transferida'
+                ? 'bg-industrial-orange text-white'
+                : 'bg-industrial-surface text-industrial-medium border border-industrial-pale'
+            }`}
+          >
+            <ArrowDownAZ className="h-3 w-3" />
+            Transferida {stats.transferida > 0 && <span className="ml-0.5 font-bold">{stats.transferida}</span>}
+          </button>
+          <button
+            onClick={() => setStatusFilter('resolvida')}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+              statusFilter === 'resolvida'
+                ? 'bg-industrial-green text-white'
+                : 'bg-industrial-surface text-industrial-medium border border-industrial-pale'
+            }`}
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Resolvida {stats.resolvida > 0 && <span className="ml-0.5 font-bold">{stats.resolvida}</span>}
+          </button>
+          {statusFilter !== 'todos' && (
+            <button
+              onClick={() => setStatusFilter('todos')}
+              className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-industrial-medium border border-industrial-pale transition hover:bg-industrial-surface"
+            >
+              <X className="h-3 w-3" />
+              Limpar
+            </button>
+          )}
+        </div>
+
         {/* Search bar */}
-        <div className="mt-3 flex items-center gap-2 rounded-xl border border-industrial-pale bg-industrial-surface px-4 py-2.5 shadow-industrial transition focus-within:border-industrial-yellow focus-within:ring-2 focus-within:ring-industrial-yellow/20">
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-industrial-pale bg-industrial-surface/80 px-4 py-2.5 shadow-industrial transition focus-within:border-industrial-yellow focus-within:ring-2 focus-within:ring-industrial-yellow/20">
           <Search className="h-4 w-4 shrink-0 text-industrial-light" />
           <input
             value={search}
@@ -182,26 +321,8 @@ export default function ConversationsPage() {
           )}
         </div>
 
-        {/* Filters row - desktop always visible, mobile toggle */}
+        {/* Filters row + sort */}
         <div className={`mt-3 flex flex-wrap items-center gap-2 ${showFilters ? '' : 'hidden lg:flex'}`}>
-          <div className="flex flex-wrap gap-1.5">
-            {(['todos', ...ALL_STATUSES] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${
-                  statusFilter === s
-                    ? 'bg-industrial-dark text-white shadow-industrial'
-                    : 'bg-white text-industrial-medium border border-industrial-pale hover:border-industrial-light'
-                }`}
-              >
-                {STATUS_LABELS[s]}
-              </button>
-            ))}
-          </div>
-
-          <div className="h-5 w-px bg-industrial-pale"></div>
-
           <select
             value={lojaFilter}
             onChange={(e) => setLojaFilter(e.target.value)}
@@ -212,6 +333,43 @@ export default function ConversationsPage() {
               <option key={id} value={id}>{nome}</option>
             ))}
           </select>
+
+          <div className="h-5 w-px bg-industrial-pale"></div>
+
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-industrial-light">Ordenar:</span>
+          <button
+            onClick={() => toggleSort('updated')}
+            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+              sortField === 'updated'
+                ? 'bg-industrial-black text-white shadow-industrial'
+                : 'bg-white text-industrial-medium border border-industrial-pale hover:border-industrial-light'
+            }`}
+          >
+            <Clock className="h-3 w-3" />
+            Data {sortField === 'updated' && (sortDir === 'desc' ? '↓' : '↑')}
+          </button>
+          <button
+            onClick={() => toggleSort('name')}
+            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+              sortField === 'name'
+                ? 'bg-industrial-black text-white shadow-industrial'
+                : 'bg-white text-industrial-medium border border-industrial-pale hover:border-industrial-light'
+            }`}
+          >
+            <ArrowDownAZ className="h-3 w-3" />
+            Nome {sortField === 'name' && (sortDir === 'desc' ? '↓' : '↑')}
+          </button>
+          <button
+            onClick={() => toggleSort('unread')}
+            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+              sortField === 'unread'
+                ? 'bg-industrial-black text-white shadow-industrial'
+                : 'bg-white text-industrial-medium border border-industrial-pale hover:border-industrial-light'
+            }`}
+          >
+            <ArrowUpDown className="h-3 w-3" />
+            Não lidas {sortField === 'unread' && (sortDir === 'desc' ? '↓' : '↑')}
+          </button>
         </div>
       </div>
 
@@ -242,7 +400,7 @@ export default function ConversationsPage() {
 
         <div className="space-y-3">
           {filtered.map((c) => (
-            <ConversationCard key={c.id} conversation={c} />
+            <ConversationCard key={c.id} conversation={c} onAction={handleCardAction} />
           ))}
         </div>
 

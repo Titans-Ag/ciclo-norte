@@ -1,7 +1,5 @@
 'use client';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085';
-
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -9,6 +7,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useConversations } from '@/hooks/useConversations';
 import { useSSE } from '@/hooks/useSSE';
 import { StatusBadge } from '@/components/StatusBadge';
+import { IndustrialButton } from '@/components/IndustrialButton';
+import { AudioPlayer } from '@/components/AudioPlayer';
+import { ImageLightbox } from '@/components/ImageLightbox';
 import { timeAgo } from '@/lib/time';
 import { Message, Conversation, SSEEvent } from '@/types';
 import {
@@ -17,95 +18,133 @@ import {
   UserCheck,
   UserX,
   ArrowRightLeft,
-  CheckCircle,
-  Play,
-  Pause,
+  CheckCircle2,
   Loader2,
   Wifi,
   WifiOff,
+  FileText,
+  Play,
+  X,
+  Wrench,
 } from 'lucide-react';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8085';
 
 function MessageBubble({ msg }: { msg: Message }) {
   const isCliente = msg.autor_tipo === 'cliente';
   const isIA = msg.autor_tipo === 'ia';
+  const isAtendente = msg.autor_tipo === 'atendente';
 
   const align = isCliente ? 'items-start' : 'items-end';
   const bubbleBg = isCliente
-    ? 'bg-gray-100 text-gray-900'
+    ? 'bg-white border border-industrial-pale text-industrial-black'
     : isIA
-    ? 'bg-blue-50 text-blue-900'
-    : 'bg-green-50 text-green-900';
+    ? 'bg-industrial-yellow-pale border border-industrial-yellow/30 text-industrial-dark'
+    : 'bg-industrial-blue-pale border border-industrial-blue/20 text-industrial-dark';
 
-  const [playing, setPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const authorColor = isCliente
+    ? 'text-industrial-dark'
+    : isIA
+    ? 'text-industrial-yellow-dark'
+    : 'text-industrial-blue';
 
-  const toggleAudio = () => {
-    if (!audioRef.current) return;
-    if (playing) {
-      audioRef.current.pause();
-      setPlaying(false);
-    } else {
-      audioRef.current.play();
-      setPlaying(true);
-    }
-  };
+  const avatarBg = isCliente
+    ? 'bg-industrial-pale'
+    : isIA
+    ? 'bg-industrial-yellow'
+    : 'bg-industrial-blue';
 
-  const handleEnded = () => setPlaying(false);
+  const avatarIcon = isCliente ? (
+    <span className="text-xs font-bold text-industrial-medium">C</span>
+  ) : isIA ? (
+    <Wrench className="h-3 w-3 text-industrial-black" />
+  ) : (
+    <span className="text-xs font-bold text-white">A</span>
+  );
 
   return (
-    <div className={`flex flex-col ${align} mb-3`}>
-      <div className="mb-0.5 text-xs text-gray-500">
-        <span className="font-medium">{msg.autor_nome}</span>{' '}
-        <span className="text-gray-400">{timeAgo(msg.enviada_em || msg.created_at)}</span>
+    <div className={`flex flex-col ${align} mb-4`}>
+      <div className="mb-1 flex items-center gap-2">
+        <div
+          className={`flex h-5 w-5 items-center justify-center rounded-full ${avatarBg}`}
+        >
+          {avatarIcon}
+        </div>
+        <span className={`text-xs font-bold ${authorColor}`}>
+          {msg.autor_nome}
+        </span>
+        <span className="text-[10px] text-industrial-light">
+          {timeAgo(msg.enviada_em || msg.created_at)}
+        </span>
       </div>
 
-      <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm md:max-w-[60%] ${bubbleBg}`}>
-        {msg.tipo_midia === 'texto' && (
-          <p className="whitespace-pre-wrap">{msg.conteudo}</p>
+      <div
+        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm md:max-w-[65%] ${bubbleBg}`}
+      >
+        {(msg.midia_tipo === 'text' || msg.midia_tipo === 'texto') && (
+          <p className="whitespace-pre-wrap leading-relaxed">
+            {msg.conteudo || '(sem texto)'}
+          </p>
         )}
 
-        {msg.tipo_midia === 'imagem' && (
-          <div className="space-y-1">
-            {msg.midia_url && (
-              <img
-                src={msg.midia_url}
-                alt={msg.descricao_imagem || 'Imagem'}
-                className="max-h-48 rounded-lg object-cover"
-              />
-            )}
+        {(msg.midia_tipo === 'image' || msg.midia_tipo === 'imagem') && (
+          <div className="space-y-1.5">
+            {msg.midia_url && <ImageLightbox src={msg.midia_url} alt={msg.descricao_imagem || 'Imagem'} />}
             {msg.descricao_imagem && (
-              <p className="text-xs italic text-gray-600">{msg.descricao_imagem}</p>
+              <p className="text-xs italic text-industrial-medium leading-relaxed">
+                {msg.descricao_imagem}
+              </p>
             )}
           </div>
         )}
 
-        {msg.tipo_midia === 'audio' && (
-          <div className="space-y-1">
-            <button
-              onClick={toggleAudio}
-              className="flex items-center gap-2 rounded-lg bg-white/60 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-white/80"
-            >
-              {playing ? (
-                <Pause className="h-4 w-4" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-              {playing ? 'Pausar' : 'Ouvir áudio'}
-            </button>
+        {(msg.midia_tipo === 'audio' || msg.midia_tipo === 'Áudio') && (
+          <div className="space-y-1.5">
             {msg.midia_url && (
-              <audio
-                ref={audioRef}
-                src={msg.midia_url}
-                onEnded={handleEnded}
-                className="hidden"
-              />
-            )}
-            {msg.transcricao && (
-              <div className="rounded bg-white/50 px-2 py-1 text-xs text-gray-700">
-                📝 {msg.transcricao}
-              </div>
+              <AudioPlayer src={msg.midia_url} transcricao={msg.transcricao} />
             )}
           </div>
+        )}
+
+        {(msg.midia_tipo === 'video' || msg.midia_tipo === 'vídeo') && (
+          <div className="space-y-1.5">
+            {msg.midia_url && (
+              <video
+                src={msg.midia_url}
+                controls
+                className="max-h-52 rounded-lg"
+                preload="metadata"
+              />
+            )}
+          </div>
+        )}
+
+        {(msg.midia_tipo === 'document' || msg.midia_tipo === 'documento') && (
+          <div className="space-y-1.5">
+            {msg.midia_url && (
+              <a
+                href={msg.midia_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-lg bg-white/60 px-3 py-2 text-xs font-semibold text-industrial-dark transition hover:bg-white"
+              >
+                <FileText className="h-4 w-4 text-industrial-medium" />
+                <span className="truncate">Abrir documento</span>
+              </a>
+            )}
+          </div>
+        )}
+
+        {![
+          'text', 'texto',
+          'image', 'imagem',
+          'audio', 'Áudio',
+          'video', 'vídeo',
+          'document', 'documento',
+        ].includes(msg.midia_tipo) && (
+          <p className="whitespace-pre-wrap italic text-industrial-medium">
+            {msg.conteudo || '(conteúdo não suportado)'}
+          </p>
         )}
       </div>
     </div>
@@ -136,6 +175,7 @@ function ChatContent() {
   const [transferLoja, setTransferLoja] = useState('');
   const [transferAtendente, setTransferAtendente] = useState('');
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const conversation = conversations.find((c) => c.id === conversaId);
 
@@ -186,6 +226,7 @@ function ChatContent() {
       setInput('');
       const msgs = await fetchMessages(conversaId);
       setMessages(msgs);
+      inputRef.current?.focus();
     }
     setSending(false);
   };
@@ -193,14 +234,17 @@ function ChatContent() {
   const handleAction = async (action: string, body?: unknown) => {
     setActionLoading(action);
     try {
-      const res = await fetch(`${API_BASE}/api/conversations/${conversaId}/${action}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      });
+      const res = await fetch(
+        `${API_BASE}/api/conversations/${conversaId}/${action}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: body ? JSON.stringify(body) : undefined,
+        }
+      );
       if (res.ok) {
         await fetchConversations();
       }
@@ -224,92 +268,100 @@ function ChatContent() {
 
   if (!conversaId) {
     return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        Selecione uma conversa na lista.
+      <div className="flex h-full flex-col items-center justify-center text-industrial-medium">
+        <Wrench className="mb-3 h-12 w-12 text-industrial-pale" />
+        <p className="text-sm font-semibold">Selecione uma conversa na lista.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-industrial-surface">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-3 py-2 md:px-4 md:py-3">
+      <div className="flex items-center gap-3 border-b border-industrial-pale bg-white px-4 py-3 md:px-6 md:py-4">
         <Link
           href="/conversations"
-          className="rounded-lg p-1 text-gray-500 hover:bg-gray-100"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-industrial-medium transition hover:bg-industrial-surface hover:text-industrial-dark md:hidden"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
 
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-gray-900">
+          <div className="truncate text-sm font-bold text-industrial-black">
             {conversation?.cliente_nome || 'Conversa'}
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={conversation?.status || 'ia_ativa'} />
-            <span className="text-xs text-gray-400">
+            <StatusBadge status={conversation?.status || 'ia_ativa'} size="sm" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-industrial-light">
               {conversation?.loja_nome}
             </span>
             {connected ? (
-              <Wifi className="h-3 w-3 text-green-600" />
+              <Wifi className="h-3 w-3 text-industrial-green" />
             ) : (
-              <WifiOff className="h-3 w-3 text-red-500" />
+              <WifiOff className="h-3 w-3 text-industrial-red" />
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {conversation?.status === 'ia_ativa' && (
-            <button
+            <IndustrialButton
+              variant="primary"
+              size="sm"
               onClick={() => handleAction('assumir')}
-              disabled={!!actionLoading}
-              className="flex items-center gap-1 rounded-lg bg-green-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
+              loading={actionLoading === 'assumir'}
+              leftIcon={<UserCheck className="h-3.5 w-3.5" />}
             >
-              <UserCheck className="h-3.5 w-3.5" />
               Assumir
-            </button>
+            </IndustrialButton>
           )}
 
           {conversation?.status === 'humano' && (
             <>
-              <button
+              <IndustrialButton
+                variant="ghost"
+                size="sm"
                 onClick={() => handleAction('devolver')}
-                disabled={!!actionLoading}
-                className="flex items-center gap-1 rounded-lg bg-gray-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+                loading={actionLoading === 'devolver'}
+                leftIcon={<UserX className="h-3.5 w-3.5" />}
               >
-                <UserX className="h-3.5 w-3.5" />
                 Devolver
-              </button>
-              <button
+              </IndustrialButton>
+              <IndustrialButton
+                variant="secondary"
+                size="sm"
                 onClick={() => setTransferModal(true)}
-                disabled={!!actionLoading}
-                className="flex items-center gap-1 rounded-lg bg-orange-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+                loading={actionLoading === 'transferir'}
+                leftIcon={<ArrowRightLeft className="h-3.5 w-3.5" />}
               >
-                <ArrowRightLeft className="h-3.5 w-3.5" />
                 Transferir
-              </button>
+              </IndustrialButton>
             </>
           )}
 
-          {(conversation?.status === 'humano' || conversation?.status === 'transferida') && (
-            <button
+          {(conversation?.status === 'humano' ||
+            conversation?.status === 'transferida') && (
+            <IndustrialButton
+              variant="dark"
+              size="sm"
               onClick={() => handleAction('resolver')}
-              disabled={!!actionLoading}
-              className="flex items-center gap-1 rounded-lg bg-blue-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              loading={actionLoading === 'resolver'}
+              leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
             >
-              <CheckCircle className="h-3.5 w-3.5" />
               Resolver
-            </button>
+            </IndustrialButton>
           )}
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 px-3 py-3 md:px-6 md:py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-8 md:py-6">
         {msgLoading && messages.length === 0 && (
-          <div className="flex items-center justify-center py-10 text-gray-400">
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Carregando mensagens...
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-industrial-yellow" />
+            <p className="mt-3 text-sm font-medium text-industrial-medium">
+              Carregando mensagens...
+            </p>
           </div>
         )}
 
@@ -319,12 +371,18 @@ function ChatContent() {
           ))}
 
           {typing && (
-            <div className="mb-3 flex items-end justify-end">
-              <div className="max-w-[80%] rounded-2xl bg-blue-50 px-3 py-2 text-sm text-blue-900 md:max-w-[60%]">
-                <div className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400 [animation-delay:0.2s]" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400 [animation-delay:0.4s]" />
+            <div className="mb-4 flex items-end justify-end">
+              <div className="max-w-[80%] rounded-2xl border border-industrial-yellow/30 bg-industrial-yellow-pale px-4 py-2.5 text-sm text-industrial-dark md:max-w-[60%]">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-industrial-yellow-dark" />
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-industrial-yellow-dark"
+                    style={{ animationDelay: '0.2s' }}
+                  />
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-industrial-yellow-dark"
+                    style={{ animationDelay: '0.4s' }}
+                  />
                 </div>
               </div>
             </div>
@@ -335,9 +393,10 @@ function ChatContent() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-200 bg-white px-3 py-2 md:px-4 md:py-3">
+      <div className="border-t border-industrial-pale bg-white px-4 py-3 md:px-6 md:py-4">
         <div className="mx-auto flex max-w-3xl items-center gap-2">
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -348,61 +407,87 @@ function ChatContent() {
             }}
             placeholder="Digite uma mensagem..."
             disabled={sending}
-            className="flex-1 rounded-xl border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+            className="flex-1 rounded-xl border border-industrial-pale bg-industrial-surface px-4 py-3 text-sm font-medium text-industrial-black shadow-industrial outline-none transition placeholder:text-industrial-light focus:border-industrial-yellow focus:ring-2 focus:ring-industrial-yellow/20 disabled:opacity-50"
           />
-          <button
+          <IndustrialButton
+            variant="dark"
+            size="md"
             onClick={handleSend}
-            disabled={sending || !input.trim()}
-            className="flex items-center justify-center rounded-xl bg-blue-600 p-2.5 text-white transition hover:bg-blue-700 disabled:opacity-60"
+            loading={sending}
+            disabled={!input.trim()}
+            leftIcon={
+              sending ? undefined : <Send className="h-4 w-4" />
+            }
+            className="shrink-0"
           >
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </button>
+            {sending ? '' : 'Enviar'}
+          </IndustrialButton>
         </div>
       </div>
 
       {/* Transfer Modal */}
       {transferModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-          <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl">
-            <h3 className="mb-3 text-base font-semibold text-gray-900">Transferir conversa</h3>
-            <div className="space-y-3">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+          <div className="w-full max-w-sm rounded-2xl border border-industrial-pale bg-white p-6 shadow-industrial-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-bold text-industrial-black">
+                Transferir conversa
+              </h3>
+              <button
+                onClick={() => setTransferModal(false)}
+                className="rounded-lg p-1 text-industrial-medium transition hover:bg-industrial-surface"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Loja</label>
+                <label className="mb-1.5 block text-sm font-semibold text-industrial-dark">
+                  Loja de destino
+                </label>
                 <select
                   value={transferLoja}
                   onChange={(e) => setTransferLoja(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
+                  className="w-full rounded-xl border border-industrial-pale bg-industrial-surface px-4 py-3 text-sm text-industrial-black shadow-industrial outline-none transition focus:border-industrial-yellow focus:ring-2 focus:ring-industrial-yellow/20"
                 >
-                  <option value="">Selecione...</option>
+                  <option value="">Selecione uma loja...</option>
                   <option value="loja-vendas">Vendas</option>
                   <option value="loja-locacao">Locação</option>
                   <option value="loja-manutencao">Manutenção</option>
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Atendente (opcional)</label>
+                <label className="mb-1.5 block text-sm font-semibold text-industrial-dark">
+                  Atendente (opcional)
+                </label>
                 <input
                   value={transferAtendente}
                   onChange={(e) => setTransferAtendente(e.target.value)}
                   placeholder="ID do atendente"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
+                  className="w-full rounded-xl border border-industrial-pale bg-industrial-surface px-4 py-3 text-sm text-industrial-black shadow-industrial outline-none transition placeholder:text-industrial-light focus:border-industrial-yellow focus:ring-2 focus:ring-industrial-yellow/20"
                 />
               </div>
             </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
+
+            <div className="mt-6 flex justify-end gap-2">
+              <IndustrialButton
+                variant="ghost"
+                size="md"
                 onClick={() => setTransferModal(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
               >
                 Cancelar
-              </button>
-              <button
+              </IndustrialButton>
+              <IndustrialButton
+                variant="primary"
+                size="md"
                 onClick={handleTransfer}
-                disabled={!transferLoja || !!actionLoading}
-                className="rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+                loading={actionLoading === 'transferir'}
+                disabled={!transferLoja}
+                leftIcon={<ArrowRightLeft className="h-4 w-4" />}
               >
                 Transferir
-              </button>
+              </IndustrialButton>
             </div>
           </div>
         </div>
@@ -413,12 +498,14 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        Carregando...
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex h-full flex-col items-center justify-center text-industrial-medium">
+          <Loader2 className="mr-2 h-8 w-8 animate-spin text-industrial-yellow" />
+          <p className="mt-2 text-sm font-semibold">Carregando...</p>
+        </div>
+      }
+    >
       <ChatContent />
     </Suspense>
   );

@@ -23,7 +23,7 @@ export interface LojaAlocacao {
 }
 
 export type ConversationStatus = 'ia_ativa' | 'humano' | 'transferida' | 'resolvida';
-export type MessageType = 'texto' | 'imagem' | 'audio';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'document';
 export type AuthorType = 'cliente' | 'ia' | 'atendente';
 
 export interface Conversation {
@@ -54,7 +54,7 @@ export interface Message {
   autor_nome: string;
   autor_id?: string;
   conteudo?: string;
-  tipo_midia: string;
+  midia_tipo: string;
   midia_url?: string;
   transcricao?: string;
   descricao_imagem?: string;

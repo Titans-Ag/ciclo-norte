@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2 } from 'lucide-react';
+import { IndustrialLogo } from '@/components/IndustrialLogo';
+import { IndustrialButton } from '@/components/IndustrialButton';
+import { Loader2, Mail, Lock, AlertTriangle } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,61 +24,137 @@ export default function LoginPage() {
     if (ok) {
       router.push('/conversations');
     } else {
-      setError('Email ou senha incorretos.');
+      setError('Email ou senha incorretos. Verifique e tente novamente.');
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
-        <h1 className="mb-1 text-center text-2xl font-bold text-blue-700">Ciclo Norte</h1>
-        <p className="mb-6 text-center text-sm text-gray-500">Atendimento Inteligente</p>
+    <div className="flex min-h-screen">
+      {/* Left panel - Hero */}
+      <div className="hidden flex-col justify-between bg-industrial-black p-12 lg:flex lg:w-1/2 xl:w-5/12">
+        <div>
+          <IndustrialLogo size="md" />
+        </div>
 
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="seu@email.com"
-            />
+        <div className="space-y-6">
+          <div className="relative">
+            <div className="absolute -left-4 -top-4 h-20 w-20 rounded-full bg-industrial-yellow/10"></div>
+            <div className="absolute -bottom-6 -right-6 h-32 w-32 rounded-full bg-industrial-yellow/5"></div>
+            <h2 className="relative text-4xl font-black leading-tight tracking-tight text-white">
+              Atendimento
+              <br />
+              <span className="text-industrial-yellow">Inteligente</span>
+            </h2>
           </div>
 
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="••••••••"
-            />
+          <p className="max-w-sm text-base leading-relaxed text-industrial-light">
+            Gerencie conversas do WhatsApp com IA e atendentes humanos em
+            uma plataforma robusta, rápida e feita para escalar seu negócio.
+          </p>
+
+          <div className="flex items-center gap-6 pt-4">
+            <div className="text-center">
+              <div className="text-2xl font-black text-industrial-yellow">24/7</div>
+              <div className="text-xs font-medium uppercase tracking-wider text-industrial-medium">IA Ativa</div>
+            </div>
+            <div className="h-10 w-px bg-industrial-gray"></div>
+            <div className="text-center">
+              <div className="text-2xl font-black text-industrial-yellow">3</div>
+              <div className="text-xs font-medium uppercase tracking-wider text-industrial-medium">Lojas</div>
+            </div>
+            <div className="h-10 w-px bg-industrial-gray"></div>
+            <div className="text-center">
+              <div className="text-2xl font-black text-industrial-yellow">∞</div>
+              <div className="text-xs font-medium uppercase tracking-wider text-industrial-medium">Conversas</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-xs text-industrial-gray">
+          © {new Date().getFullYear()} Ciclo Norte. Todos os direitos reservados.
+        </div>
+      </div>
+
+      {/* Right panel - Form */}
+      <div className="flex flex-1 items-center justify-center bg-industrial-surface p-6">
+        <div className="w-full max-w-sm">
+          {/* Mobile logo */}
+          <div className="mb-10 flex justify-center lg:hidden">
+            <IndustrialLogo size="md" />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Entrar'}
-          </button>
-        </form>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-industrial-black">
+              Bem-vindo de volta
+            </h2>
+            <p className="mt-1 text-sm text-industrial-medium">
+              Entre com suas credenciais para acessar o painel.
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-industrial-red/20 bg-industrial-red-pale p-4">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-industrial-red" />
+              <span className="text-sm font-medium text-industrial-red">{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-industrial-dark">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-industrial-light" />
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-industrial-pale bg-white py-3 pl-11 pr-4 text-sm text-industrial-black shadow-industrial outline-none transition placeholder:text-industrial-light focus:border-industrial-yellow focus:ring-2 focus:ring-industrial-yellow/20"
+                  placeholder="seu@email.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-industrial-dark">
+                Senha
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-industrial-light" />
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-industrial-pale bg-white py-3 pl-11 pr-4 text-sm text-industrial-black shadow-industrial outline-none transition placeholder:text-industrial-light focus:border-industrial-yellow focus:ring-2 focus:ring-industrial-yellow/20"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <IndustrialButton
+              type="submit"
+              variant="dark"
+              size="lg"
+              fullWidth
+              loading={loading}
+              leftIcon={loading ? undefined : undefined}
+            >
+              {loading ? 'Entrando...' : 'Entrar'}
+            </IndustrialButton>
+          </form>
+
+          <p className="mt-6 text-center text-xs text-industrial-medium">
+            Problemas para acessar?{' '}
+            <span className="font-semibold text-industrial-dark hover:underline cursor-pointer">
+              Fale com o administrador
+            </span>
+          </p>
+        </div>
       </div>
     </div>
   );

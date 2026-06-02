@@ -27,7 +27,7 @@ export function useAuth() {
         const data = await res.json();
         setUser({
           id: data.id,
-          nome: data.email, // backend me returns id, email, role; no nome yet
+          nome: data.nome || data.email,
           email: data.email,
           role: data.role,
           created_at: '',
@@ -48,7 +48,7 @@ export function useAuth() {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, senha: password }),
       });
       if (!res.ok) return false;
       const data: LoginResponse = await res.json();

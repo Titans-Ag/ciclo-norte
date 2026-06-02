@@ -1,9 +1,79 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
+  :root {
+    --industrial-black: #1A1A1A;
+    --industrial-dark: #2D2D2D;
+    --industrial-gray: #4A4A4A;
+    --industrial-medium: #8A8A8A;
+    --industrial-light: #B0B0B0;
+    --industrial-pale: #E8E8E8;
+    --industrial-surface: #F5F5F5;
+    --industrial-white: #FFFFFF;
+    --industrial-yellow: #F5C518;
+    --industrial-yellow-pale: #FFF8E1;
+    --industrial-yellow-dark: #C29A10;
+    --industrial-blue: #2563EB;
+    --industrial-blue-pale: #EFF6FF;
+    --industrial-green: #16A34A;
+    --industrial-green-pale: #F0FDF4;
+    --industrial-orange: #EA580C;
+    --industrial-orange-pale: #FFF7ED;
+    --industrial-red: #DC2626;
+    --industrial-red-pale: #FEF2F2;
+  }
+
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--industrial-surface);
+    color: var(--industrial-black);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .bg-industrial-black { background-color: var(--industrial-black); }
+  .bg-industrial-dark { background-color: var(--industrial-dark); }
+  .bg-industrial-gray { background-color: var(--industrial-gray); }
+  .bg-industrial-surface { background-color: var(--industrial-surface); }
+  .bg-industrial-yellow { background-color: var(--industrial-yellow); }
+  .bg-industrial-yellow-pale { background-color: var(--industrial-yellow-pale); }
+  .bg-industrial-blue-pale { background-color: var(--industrial-blue-pale); }
+  .bg-industrial-green-pale { background-color: var(--industrial-green-pale); }
+  .bg-industrial-orange-pale { background-color: var(--industrial-orange-pale); }
+  .bg-industrial-red-pale { background-color: var(--industrial-red-pale); }
+
+  .text-industrial-black { color: var(--industrial-black); }
+  .text-industrial-dark { color: var(--industrial-dark); }
+  .text-industrial-gray { color: var(--industrial-gray); }
+  .text-industrial-medium { color: var(--industrial-medium); }
+  .text-industrial-light { color: var(--industrial-light); }
+  .text-industrial-yellow { color: var(--industrial-yellow); }
+  .text-industrial-yellow-dark { color: var(--industrial-yellow-dark); }
+  .text-industrial-blue { color: var(--industrial-blue); }
+  .text-industrial-green { color: var(--industrial-green); }
+  .text-industrial-orange { color: var(--industrial-orange); }
+  .text-industrial-red { color: var(--industrial-red); }
+
+  .border-industrial-pale { border-color: var(--industrial-pale); }
+  .border-industrial-yellow { border-color: var(--industrial-yellow); }
+  .border-industrial-dark { border-color: var(--industrial-dark); }
+
+  .shadow-industrial {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+  .shadow-industrial-md {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
+  }
+  .shadow-industrial-lg {
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.06), 0 4px 6px rgba(0, 0, 0, 0.04);
+  }
+  .shadow-industrial-xl {
+    box-shadow: 0 20px 25px rgba(0, 0, 0, 0.08), 0 8px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .ring-industrial-yellow {
+    --tw-ring-color: var(--industrial-yellow);
   }
 }
