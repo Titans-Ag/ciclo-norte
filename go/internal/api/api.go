@@ -106,7 +106,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 	mux.Handle("POST /api/admin/whatsapp-status/{id}/reconnect", jwtMW(admin.RequireAdmin(http.HandlerFunc(admin.ReconnectWhatsApp))))
 
 	// Webhook routes (public, called by Evolution)
-	webhookHandler := evolution.NewHandler(cfg)
+	webhookHandler := evolution.NewHandlerWithSender(cfg, evoClient)
 	webhookHandler.RegisterRoutes(mux)
 
 	return corsMiddleware(mux)

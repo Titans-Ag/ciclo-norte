@@ -29,6 +29,11 @@ type WhatsAppSender interface {
 
 // NewHandler creates a new Handler.
 func NewHandler(cfg *config.Config, sender WhatsAppSender) *Handler {
+	if sender == nil {
+		fmt.Println("WARNING: NewHandler called with nil sender")
+	} else {
+		fmt.Println("INFO: NewHandler called with sender")
+	}
 	return &Handler{cfg: cfg, sender: sender}
 }
 
@@ -270,9 +275,13 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 			if msg.Conteudo != nil {
 				caption = *msg.Conteudo
 			}
-			_ = h.sender.SendMediaMessage(context.Background(), inst.EvolutionInstanceName, conv.ClienteTelefone, msg.MidiaTipo, *msg.MidiaURL, caption)
+			if err := h.sender.SendMediaMessage(context.Background(), inst.EvolutionInstanceName, conv.ClienteTelefone, msg.MidiaTipo, *msg.MidiaURL, caption); err != nil {
+				fmt.Printf("send to evolution: send media error: %v\n", err)
+			}
 		} else if msg.Conteudo != nil {
-			_ = h.sender.SendTextMessage(context.Background(), inst.EvolutionInstanceName, conv.ClienteTelefone, *msg.Conteudo)
+			if err := h.sender.SendTextMessage(context.Background(), inst.EvolutionInstanceName, conv.ClienteTelefone, *msg.Conteudo); err != nil {
+				fmt.Printf("send to evolution: send text error: %v\n", err)
+			}
 		}
 	}()
 

@@ -33,12 +33,18 @@ type WebhookEvent struct {
 
 // Handler handles Evolution webhook requests.
 type Handler struct {
-	cfg *config.Config
+	cfg    *config.Config
+	sender agent.WhatsAppSender
 }
 
 // NewHandler creates a new webhook handler.
 func NewHandler(cfg *config.Config) *Handler {
 	return &Handler{cfg: cfg}
+}
+
+// NewHandlerWithSender creates a new webhook handler with WhatsApp sender capability.
+func NewHandlerWithSender(cfg *config.Config, sender agent.WhatsAppSender) *Handler {
+	return &Handler{cfg: cfg, sender: sender}
 }
 
 // RegisterRoutes registers webhook routes.
@@ -157,7 +163,7 @@ func (h *Handler) Receive(w http.ResponseWriter, r *http.Request) {
 	// Invoke AI agent asynchronously
 	go func() {
 		bgCtx := context.Background()
-		if err := agent.ProcessConversation(bgCtx, h.cfg, conv.ID, msg); err != nil {
+		if err := agent.ProcessConversation(bgCtx, h.cfg, conv.ID, msg, h.sender); err != nil {
 			fmt.Printf("agent process error: %v\n", err)
 		}
 	}()

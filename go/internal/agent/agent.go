@@ -18,10 +18,17 @@ import (
 	"github.com/google/uuid"
 )
 
+// WhatsAppSender abstracts sending messages to WhatsApp.
+type WhatsAppSender interface {
+	SendTextMessage(ctx context.Context, instanceName, toNumber, text string) error
+	SendMediaMessage(ctx context.Context, instanceName, toNumber, mediaType, mediaURL, caption string) error
+}
+
 // ProcessConversation processes an inbound message through the AI agent.
 // It reuses ProcessMessage so the webhook flow gets the same tool-calling
 // pipeline as the manual agent endpoint.
-func ProcessConversation(ctx context.Context, cfg *config.Config, convID uuid.UUID, inboundMsg *conversation.Mensagem) error {
+// sender is used to dispatch the agent response back to the customer on WhatsApp.
+func ProcessConversation(ctx context.Context, cfg *config.Config, convID uuid.UUID, inboundMsg *conversation.Mensagem, sender WhatsAppSender) error {
 	// Load conversation with store/agent context
 	conv, err := conversation.GetByID(ctx, convID)
 	if err != nil {
@@ -103,6 +110,18 @@ func ProcessConversation(ctx context.Context, cfg *config.Config, convID uuid.UU
 				"loja_destino_id": result.NovaLojaID,
 				"status":          "ia_ativa",
 			})
+		}
+	}
+
+	// Send agent response back to customer on WhatsApp (best effort)
+	if result != nil && result.Resposta != "" && sender != nil {
+		inst, err := conversation.GetInstanciaByID(ctx, conv.InstanciaWhatsappID)
+		if err != nil {
+			fmt.Printf("agent: get instancia for whatsapp send: %v\n", err)
+		} else {
+			if err := sender.SendTextMessage(ctx, inst.EvolutionInstanceName, conv.ClienteTelefone, result.Resposta); err != nil {
+				fmt.Printf("agent: send text to evolution: %v\n", err)
+			}
 		}
 	}
 
