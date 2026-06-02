@@ -233,6 +233,7 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		Conteudo:   &req.Conteudo,
 		MidiaURL:   strPtrOrNil(req.MidiaURL),
 		MidiaTipo:  midiaTipo,
+		Metadata:   map[string]any{},
 	}
 	now := time.Now().UTC()
 	msg.EnviadaEm = &now

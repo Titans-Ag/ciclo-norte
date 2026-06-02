@@ -91,7 +91,7 @@ func ListConversasByLoja(ctx context.Context, lojaID uuid.UUID, limit, offset in
 	}
 	defer rows.Close()
 
-	var out []*ConversaSummary
+	out := make([]*ConversaSummary, 0)
 	for rows.Next() {
 		cs := &ConversaSummary{}
 		var ultimaMsg *string

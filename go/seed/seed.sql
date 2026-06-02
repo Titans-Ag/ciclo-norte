@@ -6,7 +6,7 @@ INSERT INTO loja (id, slug, nome, descricao, tipo, endereco, telefone) VALUES
 
 -- Instância WhatsApp (1 instância compartilhada para demonstração)
 INSERT INTO instancia_whatsapp (id, loja_id, nome, evolution_instance_name, numero_telefone, evolution_base_url, status) VALUES
-('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'ciclo-norte-demo', 'ciclo-norte-demo', '+5511999999999', 'http://localhost:8080', 'connecting');
+('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'ciclo-norte-demo', 'atendi-dentista-dev', '+5519998146446', 'http://192.168.15.97:8080', 'open');
 
 -- Atendentes (senha: 'senha123' — bcrypt hash)
 INSERT INTO atendente (id, email, nome, senha_hash, role) VALUES
@@ -17,6 +17,8 @@ INSERT INTO atendente (id, email, nome, senha_hash, role) VALUES
 
 -- Alocações
 INSERT INTO atendente_loja (atendente_id, loja_id, alocado_por) VALUES
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
 ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
 ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
 ('cccccccc-cccc-cccc-cccc-cccccccccccc', '22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
