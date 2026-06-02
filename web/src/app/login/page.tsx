@@ -29,7 +29,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-full overflow-y-auto">
       {/* Left panel - Hero */}
       <div className="hidden flex-col justify-between bg-industrial-black p-12 lg:flex lg:w-1/2 xl:w-5/12">
         <div>

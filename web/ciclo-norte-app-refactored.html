@@ -1,0 +1,860 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2D2D2D">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Ciclo Norte — Atendimento</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            industrial: {
+              black: '#1A1A1A', dark: '#2D2D2D', gray: '#4A4A4A', medium: '#8A8A8A',
+              light: '#B0B0B0', pale: '#E8E8E8', surface: '#F5F5F5', white: '#FFFFFF',
+              yellow: '#F5C518', 'yellow-pale': '#FFF8E1', 'yellow-dark': '#C29A10',
+              blue: '#2563EB', 'blue-pale': '#EFF6FF', green: '#16A34A', 'green-pale': '#F0FDF4',
+              orange: '#EA580C', 'orange-pale': '#FFF7ED', red: '#DC2626', 'red-pale': '#FEF2F2',
+            }
+          },
+          boxShadow: {
+            'industrial-sm': '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)',
+            'industrial-md': '0 4px 6px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.03)',
+            'industrial-lg': '0 10px 15px rgba(0,0,0,0.06), 0 4px 6px rgba(0,0,0,0.04)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ═══ CRITICAL: Prevent body scroll entirely ═══ */
+    html, body { height: 100%; overflow: hidden; margin: 0; }
+
+    /* Thin scrollbar for scroll regions */
+    .scroll-thin::-webkit-scrollbar { width: 5px; }
+    .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+    .scroll-thin::-webkit-scrollbar-thumb { background: #E8E8E8; border-radius: 999px; }
+    .scroll-thin::-webkit-scrollbar-thumb:hover { background: #B0B0B0; }
+
+    /* Focus-visible ring for accessibility */
+    *:focus-visible {
+      outline: 2px solid #F5C518;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* Tab content fade-in */
+    .tab-content { animation: tabIn 200ms ease; }
+    @keyframes tabIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Message appear */
+    .msg-appear { animation: msgIn 250ms ease-out; }
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Dropdown animation */
+    .dropdown-menu { animation: dropIn 150ms ease; }
+    @keyframes dropIn {
+      from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Pulse for online indicator */
+    .pulse-dot { animation: pulseDot 2s ease-in-out infinite; }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  </style>
+</head>
+
+<body class="font-sans antialiased text-industrial-black">
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SHELL — h-screen flex flex-col overflow-hidden
+     This is the KEY architectural fix: no body scroll, only internal
+     regions scroll. Navbar & header are flex-none, content areas
+     use flex-1 min-h-0 overflow-y-auto.
+     ═══════════════════════════════════════════════════════════════════ -->
+<div id="app" class="h-screen flex flex-col overflow-hidden bg-industrial-surface" data-mobile-view="list" data-view="conversations">
+
+  <!-- ── Desktop Navbar (flex-none, hidden on mobile) ── -->
+  <nav class="hidden md:flex flex-none items-center justify-between h-14 px-6 bg-industrial-dark text-white shadow-industrial-md z-30">
+    <!-- Brand -->
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-industrial-yellow flex items-center justify-center">
+        <svg class="w-5 h-5 text-industrial-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <span class="text-lg font-bold tracking-tight">Ciclo Norte</span>
+    </div>
+
+    <!-- Nav Items -->
+    <div class="flex items-center gap-1">
+      <button onclick="switchView('conversations')" id="nav-conversations" class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-industrial-gray/20 text-industrial-yellow">
+        Conversas
+      </button>
+      <button onclick="switchView('admin')" id="nav-admin" class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-industrial-gray/20 text-industrial-light">
+        Admin
+      </button>
+      <div class="w-px h-6 bg-industrial-gray/30 mx-2"></div>
+      <!-- SSE Status -->
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-industrial-black/30">
+        <div class="w-2 h-2 rounded-full bg-industrial-green pulse-dot"></div>
+        <span class="text-xs font-medium text-industrial-light">Online</span>
+      </div>
+      <!-- Refresh -->
+      <button onclick="refreshConversations()" class="ml-1 p-2 rounded-lg transition-all duration-200 hover:bg-industrial-gray/20 active:scale-95" title="Atualizar">
+        <svg class="w-4 h-4 text-industrial-light" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── Main Content Area (flex-1 min-h-0) ── -->
+  <div class="flex-1 min-h-0 flex overflow-hidden">
+
+    <!-- ═══════════════════════════════════════════════
+         VIEW: CONVERSATIONS
+         ═══════════════════════════════════════════════ -->
+    <div id="view-conversations" class="flex-1 flex overflow-hidden">
+
+      <!-- ── Sidebar: Conversation List ── -->
+      <aside id="sidebar" class="w-full md:w-[380px] md:flex-none flex flex-col bg-industrial-white md:border-r border-industrial-pale">
+
+        <!-- Sidebar Header (flex-none) -->
+        <div class="flex-none p-5 border-b border-industrial-pale">
+          <!-- Title + Mobile SSE Status -->
+          <div class="flex items-center justify-between mb-4">
+            <h1 class="text-xl font-bold text-industrial-black">Conversas</h1>
+            <!-- Mobile SSE indicator -->
+            <div class="flex md:hidden items-center gap-2 px-3 py-1 rounded-full bg-industrial-green-pale border border-industrial-green/20">
+              <div class="w-1.5 h-1.5 rounded-full bg-industrial-green pulse-dot"></div>
+              <span class="text-[11px] font-medium text-industrial-green">Online</span>
+            </div>
+          </div>
+
+          <!-- Search -->
+          <div class="relative mb-3">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-industrial-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+            </svg>
+            <input type="text" placeholder="Buscar conversas..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-industrial-surface border border-industrial-pale text-sm placeholder:text-industrial-light focus:outline-none focus:border-industrial-yellow focus:ring-1 focus:ring-industrial-yellow/30 transition-all duration-200">
+          </div>
+
+          <!-- Filter Tabs -->
+          <div class="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+            <button class="filter-tab active px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-200 bg-industrial-yellow text-industrial-black" data-filter="todos">Todos</button>
+            <button class="filter-tab px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-200 bg-industrial-surface text-industrial-medium hover:bg-industrial-pale" data-filter="ia_ativa">IA Ativa</button>
+            <button class="filter-tab px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-200 bg-industrial-surface text-industrial-medium hover:bg-industrial-pale" data-filter="humano">Humano</button>
+            <button class="filter-tab px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-200 bg-industrial-surface text-industrial-medium hover:bg-industrial-pale" data-filter="transferida">Transferida</button>
+            <button class="filter-tab px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-200 bg-industrial-surface text-industrial-medium hover:bg-industrial-pale" data-filter="resolvida">Resolvida</button>
+          </div>
+        </div>
+
+        <!-- Conversation List (flex-1 min-h-0 overflow-y-auto) — THE KEY SCROLL AREA -->
+        <div class="flex-1 min-h-0 overflow-y-auto scroll-thin p-3 space-y-2" id="conversation-list">
+          <!-- Cards rendered by JS -->
+        </div>
+
+      </aside>
+
+      <!-- ── Chat Panel ── -->
+      <div id="chat-panel" class="hidden md:flex flex-1 flex-col bg-industrial-surface">
+
+        <!-- Chat Header (flex-none) -->
+        <div class="flex-none p-4 bg-industrial-white border-b border-industrial-pale shadow-industrial-sm">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <!-- Mobile Back Button -->
+              <button onclick="showConversationList()" class="md:hidden p-2 -ml-2 rounded-lg hover:bg-industrial-surface transition-colors duration-200 active:scale-95" aria-label="Voltar para conversas">
+                <svg class="w-5 h-5 text-industrial-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
+                </svg>
+              </button>
+              <!-- Avatar -->
+              <div class="w-10 h-10 rounded-full bg-industrial-yellow flex items-center justify-center flex-none">
+                <span class="text-sm font-bold text-industrial-dark">JS</span>
+              </div>
+              <div>
+                <h2 class="text-sm font-semibold text-industrial-black">João Silva</h2>
+                <p class="text-[12px] text-industrial-medium font-mono">11 98765-4321</p>
+              </div>
+              <!-- Status Badge -->
+              <span class="ml-2 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-industrial-yellow-pale text-industrial-yellow-dark border border-industrial-yellow/20">IA Ativa</span>
+            </div>
+            <!-- Actions Dropdown (click, not hover!) -->
+            <div class="relative">
+              <button onclick="toggleDropdown('chat-actions')" class="p-2 rounded-lg hover:bg-industrial-surface transition-all duration-200 active:scale-95" aria-label="Ações da conversa">
+                <svg class="w-5 h-5 text-industrial-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
+                </svg>
+              </button>
+              <div id="chat-actions" class="hidden dropdown-menu absolute right-0 top-full mt-1 w-52 bg-industrial-white rounded-xl shadow-industrial-lg border border-industrial-pale z-50 py-1.5">
+                <button class="w-full px-4 py-2.5 text-left text-sm text-industrial-black hover:bg-industrial-surface transition-colors duration-150 flex items-center gap-2.5" onclick="closeDropdowns()">
+                  <svg class="w-4 h-4 text-industrial-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/></svg>
+                  Assumir conversa
+                </button>
+                <button class="w-full px-4 py-2.5 text-left text-sm text-industrial-black hover:bg-industrial-surface transition-colors duration-150 flex items-center gap-2.5" onclick="closeDropdowns()">
+                  <svg class="w-4 h-4 text-industrial-yellow-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865zM4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
+                  Devolver para IA
+                </button>
+                <button class="w-full px-4 py-2.5 text-left text-sm text-industrial-black hover:bg-industrial-surface transition-colors duration-150 flex items-center gap-2.5" onclick="closeDropdowns()">
+                  <svg class="w-4 h-4 text-industrial-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>
+                  Transferir
+                </button>
+                <div class="my-1 h-px bg-industrial-pale"></div>
+                <button class="w-full px-4 py-2.5 text-left text-sm text-industrial-black hover:bg-industrial-surface transition-colors duration-150 flex items-center gap-2.5" onclick="closeDropdowns()">
+                  <svg class="w-4 h-4 text-industrial-green" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Marcar como resolvida
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Messages (flex-1 min-h-0 overflow-y-auto) — SECOND KEY SCROLL AREA -->
+        <div class="flex-1 min-h-0 overflow-y-auto scroll-thin p-5" id="chat-messages">
+          <!-- Messages rendered by JS -->
+        </div>
+
+        <!-- Chat Input (flex-none) -->
+        <div class="flex-none p-4 bg-industrial-white border-t border-industrial-pale">
+          <div class="flex items-end gap-3">
+            <!-- Attach button -->
+            <button class="p-2.5 rounded-xl bg-industrial-surface text-industrial-medium hover:bg-industrial-pale hover:text-industrial-gray transition-all duration-200 active:scale-95 flex-none" title="Anexar arquivo">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m0 0l-.01.01m5.638-8.387a3 3 0 11-4.242 4.242"/>
+              </svg>
+            </button>
+            <!-- Text Input -->
+            <div class="flex-1 relative">
+              <textarea id="msg-input" rows="1" placeholder="Digite sua mensagem..." class="w-full px-4 py-2.5 rounded-xl bg-industrial-surface border border-industrial-pale text-sm placeholder:text-industrial-light resize-none focus:outline-none focus:border-industrial-yellow focus:ring-1 focus:ring-industrial-yellow/30 transition-all duration-200 max-h-32" onkeydown="handleInputKey(event)"></textarea>
+            </div>
+            <!-- Send Button -->
+            <button onclick="sendMessage()" class="p-2.5 rounded-xl bg-industrial-yellow text-industrial-dark hover:bg-industrial-yellow-dark hover:text-industrial-white transition-all duration-200 active:scale-95 flex-none shadow-industrial-sm" title="Enviar">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+    <!-- /view-conversations -->
+
+    <!-- ═══════════════════════════════════════════════
+         VIEW: ADMIN
+         ═══════════════════════════════════════════════ -->
+    <div id="view-admin" class="hidden flex-1 flex flex-col overflow-hidden">
+
+      <!-- Admin Header with PROMINENT Back Button (flex-none) -->
+      <div class="flex-none p-5 bg-industrial-white border-b border-industrial-pale shadow-industrial-sm">
+        <div class="flex items-center gap-4">
+          <!-- ★ PROMINENT BACK BUTTON ★ -->
+          <button onclick="switchView('conversations')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-industrial-yellow text-industrial-dark font-semibold text-sm shadow-industrial-sm hover:shadow-industrial-md hover:brightness-105 active:scale-[0.98] transition-all duration-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
+            </svg>
+            Voltar para Conversas
+          </button>
+          <div>
+            <h1 class="text-xl font-bold text-industrial-black">Administração</h1>
+            <p class="text-[12px] text-industrial-medium mt-0.5">Gerencie lojas, atendentes e configurações</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tabs (flex-none) -->
+      <div class="flex-none bg-industrial-white border-b border-industrial-pale">
+        <div class="flex overflow-x-auto px-5 gap-1">
+          <button class="admin-tab active px-4 py-3 text-sm font-medium border-b-2 border-industrial-yellow text-industrial-black whitespace-nowrap transition-all duration-200" data-tab="lojas">Lojas</button>
+          <button class="admin-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-industrial-medium hover:text-industrial-gray whitespace-nowrap transition-all duration-200" data-tab="atendentes">Atendentes</button>
+          <button class="admin-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-industrial-medium hover:text-industrial-gray whitespace-nowrap transition-all duration-200" data-tab="agente">Agente IA</button>
+          <button class="admin-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-industrial-medium hover:text-industrial-gray whitespace-nowrap transition-all duration-200" data-tab="fluxo">Fluxo</button>
+          <button class="admin-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-industrial-medium hover:text-industrial-gray whitespace-nowrap transition-all duration-200" data-tab="whatsapp">WhatsApp</button>
+        </div>
+      </div>
+
+      <!-- Admin Content (flex-1 min-h-0 overflow-y-auto) -->
+      <div class="flex-1 min-h-0 overflow-y-auto scroll-thin p-5" id="admin-content">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+    <!-- /view-admin -->
+
+  </div>
+
+  <!-- ── Mobile Bottom Nav (md:hidden, flex-none) ── -->
+  <nav class="md:hidden flex-none h-16 bg-industrial-dark flex items-center justify-around px-2 z-30 border-t border-industrial-gray/20 safe-area-bottom">
+    <button onclick="switchView('conversations')" id="mob-conversations" class="flex flex-col items-center gap-1 py-2 px-4 rounded-lg transition-all duration-200 active:scale-95">
+      <svg class="w-6 h-6 text-industrial-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.126C3.738 16.636 3 14.474 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
+      </svg>
+      <span class="text-[10px] font-medium text-industrial-yellow">Conversas</span>
+    </button>
+    <button onclick="switchView('admin')" id="mob-admin" class="flex flex-col items-center gap-1 py-2 px-4 rounded-lg transition-all duration-200 active:scale-95">
+      <svg class="w-6 h-6 text-industrial-light" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.312.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      <span class="text-[10px] font-medium text-industrial-light">Admin</span>
+    </button>
+  </nav>
+
+</div>
+<!-- /app shell -->
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     JAVASCRIPT — State, rendering, interactions
+     All client-side. No SSR. Compatible with static export.
+     ═══════════════════════════════════════════════════════════════════ -->
+<script>
+// ── Sample Data ──
+const conversations = [
+  { id: 'conv-1', name: 'João Silva', phone: '11 98765-4321', status: 'ia_ativa', store: 'Ciclo Norte - Vendas', preview: 'Bom dia! Quero alugar um betoneira de 400L. Qual o valor da diária?', time: '2 min', unread: 2, initials: 'JS' },
+  { id: 'conv-2', name: 'Maria Oliveira', phone: '11 91234-5678', status: 'humano', store: 'Ciclo Norte - Locação', preview: 'Preciso de um andaime de 6m para obra em Guarulhos', time: '15 min', unread: 0, initials: 'MO' },
+  { id: 'conv-3', name: 'Carlos Santos', phone: '11 97654-3210', status: 'transferida', store: 'Ciclo Norte - Manutenção', preview: 'A compressor que aluguei está com vazamento de óleo', time: '1h', unread: 1, initials: 'CS' },
+  { id: 'conv-4', name: 'Ana Beatriz Costa', phone: '11 99876-5432', status: 'ia_ativa', store: 'Ciclo Norte - Vendas', preview: 'Vocês têm martelo demolidor para vender?', time: '2h', unread: 0, initials: 'AC' },
+  { id: 'conv-5', name: 'Roberto Lima', phone: '11 93456-7890', status: 'resolvida', store: 'Ciclo Norte - Locação', preview: 'Ok, vou devolver o gerador sexta-feira', time: '3h', unread: 0, initials: 'RL' },
+  { id: 'conv-6', name: 'Fernanda Alves', phone: '11 96789-0123', status: 'humano', store: 'Ciclo Norte - Vendas', preview: 'Quero saber sobre o plano de manutenção preventiva', time: '5h', unread: 3, initials: 'FA' },
+  { id: 'conv-7', name: 'Pedro Henrique', phone: '11 94567-8901', status: 'ia_ativa', store: 'Ciclo Norte - Locação', preview: 'Boa tarde! Preciso alugar uma serra circular', time: '1 dia', unread: 0, initials: 'PH' },
+  { id: 'conv-8', name: 'Luciana Mendes', phone: '11 92345-6789', status: 'resolvida', store: 'Ciclo Norte - Manutenção', preview: 'Agradeço o atendimento, problema resolvido!', time: '2 dias', unread: 0, initials: 'LM' },
+];
+
+const chatMessages = [
+  { type: 'cliente', name: 'João Silva', content: 'Bom dia! Quero alugar um betoneira de 400L para uma obra. Qual o valor da diária?', time: '10:32' },
+  { type: 'agente', name: 'Ana IA', content: 'Bom dia, João! Temos a betoneira de 400L disponível para locação. O valor da diária é R$ 85,00. Caso precise de período extendido, oferecemos desconto progressivo:\n\n• 1-3 dias: R$ 85,00/dia\n• 4-7 dias: R$ 75,00/dia\n• 8+ dias: R$ 65,00/dia\n\nDeseja fazer a reserva?', time: '10:32' },
+  { type: 'cliente', name: 'João Silva', content: 'Interessante! Vou precisar por uns 5 dias. Como funciona a retirada?', time: '10:35' },
+  { type: 'agente', name: 'Ana IA', content: 'Ótimo! Para 5 dias, o valor sai a R$ 75,00/dia (total R$ 375,00). A retirada pode ser feita na nossa loja da Av. Industrial, 1200 — Vila Leopoldina. Funcionamos de seg a sex, 7h às 17h, e sáb até 12h.\n\nDocumentos necessários: RG + CPF e comprovante de residência.', time: '10:35' },
+  { type: 'cliente', name: 'João Silva', content: 'Perfeito, vou passar lá amanhã. Obrigado!', time: '10:38' },
+  { type: 'agente', name: 'Ana IA', content: 'Combinado, João! Ficaremos aguardando. Qualquer dúvida, é só chamar. Bom trabalho!', time: '10:38' },
+];
+
+const lojas = [
+  { id: 1, nome: 'Ciclo Norte - Vendas', tipo: 'vendas', endereco: 'Av. Industrial, 1200 - Vila Leopoldina, SP', telefone: '11 3456-7890', status: 'ativa' },
+  { id: 2, nome: 'Ciclo Norte - Locação', tipo: 'locacao', endereco: 'Rua das Máquinas, 450 - Barra Funda, SP', telefone: '11 3456-7891', status: 'ativa' },
+  { id: 3, nome: 'Ciclo Norte - Manutenção', tipo: 'manutencao', endereco: 'Rua do Aço, 890 - Osasco, SP', telefone: '11 3456-7892', status: 'ativa' },
+];
+
+const atendentes = [
+  { id: 1, nome: 'Filipe Rocha', email: 'filipe@ciclonorte.com', role: 'admin', lojas: ['Vendas', 'Locação', 'Manutenção'] },
+  { id: 2, nome: 'Carla Souza', email: 'carla@ciclonorte.com', role: 'atendente', lojas: ['Vendas', 'Locação'] },
+  { id: 3, nome: 'Marcos Dias', email: 'marcos@ciclonorte.com', role: 'atendente', lojas: ['Manutenção'] },
+];
+
+// ── State ──
+let currentView = 'conversations';
+let activeConversation = 'conv-1';
+let mobileShowChat = false;
+let activeAdminTab = 'lojas';
+let activeFilter = 'todos';
+
+// ── Status config ──
+const statusConfig = {
+  ia_ativa:    { label: 'IA Ativa',     bg: 'bg-industrial-yellow-pale',   text: 'text-industrial-yellow-dark', border: 'border-industrial-yellow/20' },
+  humano:     { label: 'Humano',      bg: 'bg-industrial-blue-pale',     text: 'text-industrial-blue',       border: 'border-industrial-blue/20' },
+  transferida:{ label: 'Transferida', bg: 'bg-industrial-orange-pale',  text: 'text-industrial-orange',     border: 'border-industrial-orange/20' },
+  resolvida:  { label: 'Resolvida',   bg: 'bg-industrial-green-pale',    text: 'text-industrial-green',      border: 'border-industrial-green/20' },
+};
+
+const avatarColors = {
+  ia_ativa: 'bg-industrial-yellow',
+  humano: 'bg-industrial-blue',
+  transferida: 'bg-industrial-orange',
+  resolvida: 'bg-industrial-gray',
+};
+
+// ── Render Conversation List ──
+function renderConversationList() {
+  const list = document.getElementById('conversation-list');
+  const filtered = activeFilter === 'todos' ? conversations : conversations.filter(c => c.status === activeFilter);
+
+  list.innerHTML = filtered.map(conv => {
+    const sc = statusConfig[conv.status];
+    const isActive = conv.id === activeConversation;
+    const avatarBg = avatarColors[conv.status];
+    const avatarTextColor = conv.status === 'ia_ativa' ? 'text-industrial-dark' : 'text-white';
+
+    return `
+      <div class="group p-4 rounded-xl cursor-pointer transition-all duration-200
+        ${isActive
+          ? 'bg-industrial-yellow-pale/60 shadow-industrial-md'
+          : 'bg-industrial-white shadow-industrial-sm hover:shadow-industrial-md hover:scale-[1.01] hover:bg-white'
+        } border border-industrial-pale/60"
+        onclick="selectConversation('${conv.id}')">
+
+        <div class="flex gap-3.5">
+          <!-- Avatar -->
+          <div class="relative flex-none">
+            <div class="w-11 h-11 rounded-full ${avatarBg} flex items-center justify-center shadow-sm">
+              <span class="text-[13px] font-bold ${avatarTextColor}">${conv.initials}</span>
+            </div>
+            ${conv.unread > 0 ? `<div class="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-industrial-yellow text-industrial-dark text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-sm">${conv.unread}</div>` : ''}
+          </div>
+
+          <!-- Content -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <h3 class="text-[14px] font-semibold text-industrial-black truncate">${conv.name}</h3>
+              <span class="text-[11px] text-industrial-medium whitespace-nowrap flex-none mt-0.5">${conv.time}</span>
+            </div>
+            <p class="text-[13px] text-industrial-gray line-clamp-2 leading-snug mb-2">${conv.preview}</p>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-industrial-medium truncate">${conv.store}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-medium ${sc.bg} ${sc.text} border ${sc.border} flex-none">${sc.label}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Render Chat Messages ──
+function renderChatMessages() {
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = chatMessages.map(msg => {
+    const isClient = msg.type === 'cliente';
+    const isAgent = msg.type === 'agente';
+
+    const bubbleBg = isClient
+      ? 'bg-industrial-white border border-industrial-pale'
+      : isAgent
+        ? 'bg-industrial-yellow-pale border border-industrial-yellow/15'
+        : 'bg-industrial-blue-pale border border-industrial-blue/15';
+
+    const alignClass = isClient ? 'mr-auto' : 'ml-auto';
+    const maxWidth = 'max-w-[85%] md:max-w-[65%]';
+
+    return `
+      <div class="flex ${isClient ? 'justify-start' : 'justify-end'} mb-3 msg-appear">
+        <div class="${alignClass} ${maxWidth}">
+          <div class="${bubbleBg} rounded-2xl px-4 py-3 shadow-industrial-sm">
+            ${!isClient ? `<p class="text-[11px] font-semibold ${isAgent ? 'text-industrial-yellow-dark' : 'text-industrial-blue'} mb-1">${msg.name}</p>` : ''}
+            <p class="text-[14px] text-industrial-black leading-relaxed whitespace-pre-line">${msg.content}</p>
+          </div>
+          <p class="text-[11px] text-industrial-light mt-1 ${isClient ? 'text-left' : 'text-right'}">${msg.time}</p>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Scroll to bottom
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── Render Admin Content ──
+function renderAdminContent() {
+  const container = document.getElementById('admin-content');
+
+  if (activeAdminTab === 'lojas') {
+    container.innerHTML = `
+      <div class="tab-content max-w-4xl">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-bold text-industrial-black">Lojas</h2>
+            <p class="text-[13px] text-industrial-medium mt-0.5">${lojas.length} lojas cadastradas</p>
+          </div>
+          <button class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-industrial-yellow text-industrial-dark text-sm font-semibold shadow-industrial-sm hover:shadow-industrial-md hover:brightness-105 active:scale-[0.98] transition-all duration-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            Nova Loja
+          </button>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          ${lojas.map(l => `
+            <div class="p-5 rounded-2xl bg-industrial-white border border-industrial-pale shadow-industrial-sm hover:shadow-industrial-md transition-all duration-200 hover:scale-[1.01]">
+              <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 rounded-xl bg-industrial-surface flex items-center justify-center">
+                  <svg class="w-5 h-5 text-industrial-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016A3.001 3.001 0 0021 9.349m-18 0a2.999 2.999 0 00.68-1.599M3 9.35a2.999 2.999 0 012.25-1.016c.896 0 1.7.393 2.25 1.016M3 9.349V6.75m18 2.599V6.75"/></svg>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-industrial-green-pale text-industrial-green border border-industrial-green/20">Ativa</span>
+              </div>
+              <h3 class="text-[15px] font-semibold text-industrial-black mb-1">${l.nome}</h3>
+              <p class="text-[12px] text-industrial-medium capitalize mb-2">${l.tipo}</p>
+              <div class="space-y-1.5 text-[12px] text-industrial-gray">
+                <p class="flex items-start gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-industrial-light mt-0.5 flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                  ${l.endereco}
+                </p>
+                <p class="flex items-center gap-1.5 font-mono">
+                  <svg class="w-3.5 h-3.5 text-industrial-light flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+                  ${l.telefone}
+                </p>
+              </div>
+              <div class="mt-4 pt-3 border-t border-industrial-pale/60 flex gap-2">
+                <button class="flex-1 px-3 py-2 rounded-lg text-[12px] font-medium bg-industrial-surface text-industrial-gray hover:bg-industrial-pale transition-all duration-200 active:scale-[0.98]">Editar</button>
+                <button class="px-3 py-2 rounded-lg text-[12px] font-medium bg-industrial-red-pale text-industrial-red border border-industrial-red/15 hover:bg-red-50 transition-all duration-200 active:scale-[0.98]">Desativar</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (activeAdminTab === 'atendentes') {
+    container.innerHTML = `
+      <div class="tab-content max-w-4xl">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-bold text-industrial-black">Atendentes</h2>
+            <p class="text-[13px] text-industrial-medium mt-0.5">${atendentes.length} atendentes cadastrados</p>
+          </div>
+          <button class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-industrial-yellow text-industrial-dark text-sm font-semibold shadow-industrial-sm hover:shadow-industrial-md hover:brightness-105 active:scale-[0.98] transition-all duration-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            Novo Atendente
+          </button>
+        </div>
+        <div class="space-y-3">
+          ${atendentes.map(a => `
+            <div class="p-5 rounded-2xl bg-industrial-white border border-industrial-pale shadow-industrial-sm hover:shadow-industrial-md transition-all duration-200">
+              <div class="flex items-start gap-4">
+                <div class="w-11 h-11 rounded-full ${a.role === 'admin' ? 'bg-industrial-yellow' : 'bg-industrial-blue'} flex items-center justify-center flex-none">
+                  <span class="text-[13px] font-bold ${a.role === 'admin' ? 'text-industrial-dark' : 'text-white'}">${a.nome.split(' ').map(n => n[0]).join('')}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-0.5">
+                    <h3 class="text-[15px] font-semibold text-industrial-black">${a.nome}</h3>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-medium ${a.role === 'admin' ? 'bg-industrial-yellow-pale text-industrial-yellow-dark border border-industrial-yellow/20' : 'bg-industrial-blue-pale text-industrial-blue border border-industrial-blue/20'}">${a.role === 'admin' ? 'Admin' : 'Atendente'}</span>
+                  </div>
+                  <p class="text-[13px] text-industrial-medium font-mono mb-2">${a.email}</p>
+                  <div class="flex flex-wrap gap-1.5">
+                    ${a.lojas.map(l => `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-industrial-surface text-industrial-gray border border-industrial-pale">${l}</span>`).join('')}
+                  </div>
+                </div>
+                <button class="p-2 rounded-lg hover:bg-industrial-surface transition-all duration-200 active:scale-95 flex-none">
+                  <svg class="w-4 h-4 text-industrial-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (activeAdminTab === 'agente') {
+    container.innerHTML = `
+      <div class="tab-content max-w-3xl">
+        <h2 class="text-lg font-bold text-industrial-black mb-5">Agente IA</h2>
+        <div class="p-6 rounded-2xl bg-industrial-white border border-industrial-pale shadow-industrial-sm space-y-5">
+          <div>
+            <label class="block text-[13px] font-medium text-industrial-gray mb-1.5">Nome do Agente</label>
+            <input type="text" value="Ana IA" class="w-full px-4 py-2.5 rounded-xl bg-industrial-surface border border-industrial-pale text-sm focus:outline-none focus:border-industrial-yellow focus:ring-1 focus:ring-industrial-yellow/30 transition-all duration-200">
+          </div>
+          <div>
+            <label class="block text-[13px] font-medium text-industrial-gray mb-1.5">Prompt do Sistema</label>
+            <textarea rows="6" class="w-full px-4 py-3 rounded-xl bg-industrial-surface border border-industrial-pale text-sm leading-relaxed focus:outline-none focus:border-industrial-yellow focus:ring-1 focus:ring-industrial-yellow/30 transition-all duration-200 resize-none">Você é a Ana, assistente virtual da Ciclo Norte, empresa de aluguel e venda de ferramentas e equipamentos de construção. Seja sempre cordial, direta e ofereça informações precisas sobre produtos, preços e disponibilidade. Quando não souber algo, direcione o cliente para um atendente humano.</textarea>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[13px] font-medium text-industrial-gray mb-1.5">Modelo</label>
+              <select class="w-full px-4 py-2.5 rounded-xl bg-industrial-surface border border-industrial-pale text-sm focus:outline-none focus:border-industrial-yellow focus:ring-1 focus:ring-industrial-yellow/30 transition-all duration-200">
+                <option>gpt-4o-mini</option>
+                <option>gpt-4o</option>
+                <option>gpt-3.5-turbo</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[13px] font-medium text-industrial-gray mb-1.5">Temperatura</label>
+              <div class="flex items-center gap-3">
+                <input type="range" min="0" max="100" value="30" class="flex-1 accent-industrial-yellow">
+                <span class="text-sm font-mono text-industrial-gray w-10 text-right">0.3</span>
+              </div>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-industrial-pale">
+            <button class="px-5 py-2.5 rounded-xl bg-industrial-yellow text-industrial-dark text-sm font-semibold shadow-industrial-sm hover:shadow-industrial-md hover:brightness-105 active:scale-[0.98] transition-all duration-200">Salvar Configurações</button>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (activeAdminTab === 'fluxo') {
+    container.innerHTML = `
+      <div class="tab-content max-w-3xl">
+        <h2 class="text-lg font-bold text-industrial-black mb-2">Fluxo de Atendimento</h2>
+        <p class="text-[13px] text-industrial-medium mb-5">Diagrama visual do fluxo atual do agente IA</p>
+        <div class="p-8 rounded-2xl bg-industrial-white border border-industrial-pale shadow-industrial-sm">
+          <svg viewBox="0 0 600 320" class="w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Main Agent -->
+            <rect x="200" y="20" width="200" height="56" rx="12" fill="#FFF8E1" stroke="#F5C518" stroke-width="1.5"/>
+            <text x="300" y="45" text-anchor="middle" fill="#C29A10" font-size="13" font-weight="600" font-family="Inter">Agente Principal</text>
+            <text x="300" y="62" text-anchor="middle" fill="#8A8A8A" font-size="10" font-family="Inter">Ana IA — gpt-4o-mini</text>
+
+            <!-- Arrow down -->
+            <line x1="300" y1="76" x2="300" y2="120" stroke="#E8E8E8" stroke-width="1.5" marker-end="url(#arrow)"/>
+            <!-- Diamond -->
+            <polygon points="300,120 340,150 300,180 260,150" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+            <text x="300" y="153" text-anchor="middle" fill="#2563EB" font-size="10" font-weight="500" font-family="Inter">Rotear</text>
+
+            <!-- Branches -->
+            <line x1="260" y1="150" x2="130" y2="220" stroke="#E8E8E8" stroke-width="1.5" marker-end="url(#arrow)"/>
+            <line x1="300" y1="180" x2="300" y2="220" stroke="#E8E8E8" stroke-width="1.5" marker-end="url(#arrow)"/>
+            <line x1="340" y1="150" x2="470" y2="220" stroke="#E8E8E8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+            <!-- Sub-agents -->
+            <rect x="30" y="220" width="200" height="50" rx="10" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5"/>
+            <text x="130" y="242" text-anchor="middle" fill="#16A34A" font-size="11" font-weight="600" font-family="Inter">Catálogo</text>
+            <text x="130" y="258" text-anchor="middle" fill="#8A8A8A" font-size="9" font-family="Inter">Produtos e disponibilidade</text>
+
+            <rect x="200" y="220" width="200" height="50" rx="10" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.5"/>
+            <text x="300" y="242" text-anchor="middle" fill="#EA580C" font-size="11" font-weight="600" font-family="Inter">Preços</text>
+            <text x="300" y="258" text-anchor="middle" fill="#8A8A8A" font-size="9" font-family="Inter">Tabelas e descontos</text>
+
+            <rect x="370" y="220" width="200" height="50" rx="10" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+            <text x="470" y="242" text-anchor="middle" fill="#DC2626" font-size="11" font-weight="600" font-family="Inter">Estoque</text>
+            <text x="470" y="258" text-anchor="middle" fill="#8A8A8A" font-size="9" font-family="Inter">Disponibilidade por loja</text>
+
+            <!-- Human fallback -->
+            <line x1="300" y1="270" x2="300" y2="300" stroke="#E8E8E8" stroke-width="1.5" marker-end="url(#arrow)"/>
+            <rect x="200" y="300" width="200" height="16" rx="4" fill="#F5F5F5" stroke="#E8E8E8" stroke-width="1"/>
+            <text x="300" y="312" text-anchor="middle" fill="#8A8A8A" font-size="9" font-family="Inter">Fallback → Atendente humano</text>
+
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#E8E8E8"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+    `;
+  } else if (activeAdminTab === 'whatsapp') {
+    container.innerHTML = `
+      <div class="tab-content max-w-3xl">
+        <h2 class="text-lg font-bold text-industrial-black mb-5">Instâncias WhatsApp</h2>
+        <div class="space-y-3">
+          <div class="p-5 rounded-2xl bg-industrial-white border border-industrial-pale shadow-industrial-sm">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+                </div>
+                <div>
+                  <h3 class="text-[14px] font-semibold text-industrial-black">Vendas - Principal</h3>
+                  <p class="text-[12px] text-industrial-medium font-mono">+55 11 3456-7890</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-industrial-green-pale text-industrial-green border border-industrial-green/20">
+                  <span class="w-1.5 h-1.5 rounded-full bg-industrial-green pulse-dot"></span>
+                  Conectada
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="p-5 rounded-2xl bg-industrial-white border border-industrial-pale shadow-industrial-sm">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+                </div>
+                <div>
+                  <h3 class="text-[14px] font-semibold text-industrial-black">Locação</h3>
+                  <p class="text-[12px] text-industrial-medium font-mono">+55 11 3456-7891</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-industrial-orange-pale text-industrial-orange border border-industrial-orange/20">
+                  <span class="w-1.5 h-1.5 rounded-full bg-industrial-orange pulse-dot"></span>
+                  Conectando
+                </span>
+                <button class="px-3 py-1.5 rounded-lg text-[12px] font-medium bg-industrial-surface text-industrial-gray hover:bg-industrial-pale transition-all duration-200 active:scale-[0.98]">Reconectar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+// ── View Switching ──
+function switchView(view) {
+  currentView = view;
+  const app = document.getElementById('app');
+  const convView = document.getElementById('view-conversations');
+  const admView = document.getElementById('view-admin');
+  const navConv = document.getElementById('nav-conversations');
+  const navAdm = document.getElementById('nav-admin');
+  const mobConv = document.getElementById('mob-conversations');
+  const mobAdm = document.getElementById('mob-admin');
+
+  if (view === 'conversations') {
+    convView.classList.remove('hidden');
+    convView.classList.add('flex');
+    admView.classList.add('hidden');
+    admView.classList.remove('flex');
+    if (navConv) { navConv.classList.add('text-industrial-yellow'); navConv.classList.remove('text-industrial-light'); }
+    if (navAdm) { navAdm.classList.remove('text-industrial-yellow'); navAdm.classList.add('text-industrial-light'); }
+    if (mobConv) { mobConv.querySelector('svg').classList.add('text-industrial-yellow'); mobConv.querySelector('svg').classList.remove('text-industrial-light'); mobConv.querySelector('span').classList.add('text-industrial-yellow'); mobConv.querySelector('span').classList.remove('text-industrial-light'); }
+    if (mobAdm) { mobAdm.querySelector('svg').classList.remove('text-industrial-yellow'); mobAdm.querySelector('svg').classList.add('text-industrial-light'); mobAdm.querySelector('span').classList.remove('text-industrial-yellow'); mobAdm.querySelector('span').classList.add('text-industrial-light'); }
+    app.setAttribute('data-mobile-view', mobileShowChat ? 'chat' : 'list');
+  } else {
+    convView.classList.add('hidden');
+    convView.classList.remove('flex');
+    admView.classList.remove('hidden');
+    admView.classList.add('flex');
+    if (navConv) { navConv.classList.remove('text-industrial-yellow'); navConv.classList.add('text-industrial-light'); }
+    if (navAdm) { navAdm.classList.add('text-industrial-yellow'); navAdm.classList.remove('text-industrial-light'); }
+    if (mobConv) { mobConv.querySelector('svg').classList.remove('text-industrial-yellow'); mobConv.querySelector('svg').classList.add('text-industrial-light'); mobConv.querySelector('span').classList.remove('text-industrial-yellow'); mobConv.querySelector('span').classList.add('text-industrial-light'); }
+    if (mobAdm) { mobAdm.querySelector('svg').classList.add('text-industrial-yellow'); mobAdm.querySelector('svg').classList.remove('text-industrial-light'); mobAdm.querySelector('span').classList.add('text-industrial-yellow'); mobAdm.querySelector('span').classList.remove('text-industrial-light'); }
+    renderAdminContent();
+  }
+}
+
+// ── Conversation Selection ──
+function selectConversation(id) {
+  activeConversation = id;
+  const isMobile = window.innerWidth < 768;
+
+  if (isMobile) {
+    mobileShowChat = true;
+    document.getElementById('app').setAttribute('data-mobile-view', 'chat');
+  }
+
+  renderConversationList();
+  renderChatMessages();
+}
+
+function showConversationList() {
+  mobileShowChat = false;
+  document.getElementById('app').setAttribute('data-mobile-view', 'list');
+}
+
+// ── Filter Tabs ──
+function setupFilterTabs() {
+  document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeFilter = tab.dataset.filter;
+      document.querySelectorAll('.filter-tab').forEach(t => {
+        t.classList.remove('bg-industrial-yellow', 'text-industrial-black', 'active');
+        t.classList.add('bg-industrial-surface', 'text-industrial-medium');
+      });
+      tab.classList.add('bg-industrial-yellow', 'text-industrial-black', 'active');
+      tab.classList.remove('bg-industrial-surface', 'text-industrial-medium');
+      renderConversationList();
+    });
+  });
+}
+
+// ── Admin Tabs ──
+function setupAdminTabs() {
+  document.querySelectorAll('.admin-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeAdminTab = tab.dataset.tab;
+      document.querySelectorAll('.admin-tab').forEach(t => {
+        t.classList.remove('active', 'border-industrial-yellow', 'text-industrial-black');
+        t.classList.add('border-transparent', 'text-industrial-medium');
+      });
+      tab.classList.add('active', 'border-industrial-yellow', 'text-industrial-black');
+      tab.classList.remove('border-transparent', 'text-industrial-medium');
+      renderAdminContent();
+    });
+  });
+}
+
+// ── Dropdowns (click-triggered, not hover!) ──
+function toggleDropdown(id) {
+  const el = document.getElementById(id);
+  const isHidden = el.classList.contains('hidden');
+  closeDropdowns();
+  if (isHidden) el.classList.remove('hidden');
+}
+
+function closeDropdowns() {
+  document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.add('hidden'));
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.relative') || !e.target.closest('button')) {
+    closeDropdowns();
+  }
+});
+
+// ── Chat Input ──
+function handleInputKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  chatMessages.push({
+    type: 'atendente',
+    name: 'Filipe Rocha',
+    content: text,
+    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  });
+
+  input.value = '';
+  renderChatMessages();
+}
+
+function refreshConversations() {
+  // Simulate refresh animation
+  const btn = event.currentTarget;
+  btn.querySelector('svg').classList.add('animate-spin');
+  setTimeout(() => btn.querySelector('svg').classList.remove('animate-spin'), 800);
+}
+
+// ── Mobile view CSS ──
+const mobileViewStyle = document.createElement('style');
+mobileViewStyle.textContent = `
+  /* Mobile view control via data attribute */
+  @media (max-width: 767px) {
+    [data-mobile-view="list"] #sidebar { display: flex !important; }
+    [data-mobile-view="list"] #chat-panel { display: none !important; }
+    [data-mobile-view="chat"] #sidebar { display: none !important; }
+    [data-mobile-view="chat"] #chat-panel { display: flex !important; }
+  }
+  @media (min-width: 768px) {
+    #sidebar { display: flex !important; }
+    #chat-panel { display: flex !important; }
+  }
+
+  /* Safe area for bottom nav (PWA) */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+`;
+document.head.appendChild(mobileViewStyle);
+
+// ── Initialize ──
+function init() {
+  renderConversationList();
+  renderChatMessages();
+  setupFilterTabs();
+  setupAdminTabs();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>

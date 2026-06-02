@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "Ciclo Norte App — Layout Refatorado Industrial Premium",
+  "entry": "ciclo-norte-app-refactored.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "primary": true,
+  "createdAt": "2026-06-02T14:01:52.369Z",
+  "updatedAt": "2026-06-02T14:01:52.374Z",
+  "metadata": {
+    "identifier": "ciclo-norte-app-refactored",
+    "artifactType": "text/html",
+    "inferred": false
+  }
+}

@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "Ciclo Norte — Atendimento Inteligente",
+  title: "Ciclo Norte — Atendimento",
   description: "Plataforma de atendimento WhatsApp com IA para Ciclo Norte",
   manifest: "/manifest.json",
   icons: {
@@ -13,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1A1A1A",
+  themeColor: "#2D2D2D",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -31,7 +30,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -39,9 +38,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Ciclo Norte" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className="bg-industrial-surface text-industrial-black antialiased">
-        <Navbar />
-        <main className="mx-auto max-w-7xl">{children}</main>
+      <body className="font-sans antialiased text-industrial-black">
+        {children}
         <script
           dangerouslySetInnerHTML={{
             __html: `

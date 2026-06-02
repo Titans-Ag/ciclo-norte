@@ -23,6 +23,12 @@
     --industrial-red-pale: #FEF2F2;
   }
 
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    margin: 0;
+  }
+
   body {
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background-color: var(--industrial-surface);
@@ -60,7 +66,7 @@
   .border-industrial-yellow { border-color: var(--industrial-yellow); }
   .border-industrial-dark { border-color: var(--industrial-dark); }
 
-  .shadow-industrial {
+  .shadow-industrial-sm {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   }
   .shadow-industrial-md {
@@ -76,4 +82,50 @@
   .ring-industrial-yellow {
     --tw-ring-color: var(--industrial-yellow);
   }
+
+  /* Thin scrollbar for scroll regions */
+  .scroll-thin::-webkit-scrollbar { width: 5px; }
+  .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: #E8E8E8; border-radius: 999px; }
+  .scroll-thin::-webkit-scrollbar-thumb:hover { background: #B0B0B0; }
+
+  /* Safe area for bottom nav (PWA) */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Tab content fade-in */
+  .tab-content { animation: tabIn 200ms ease; }
+  @keyframes tabIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Message appear */
+  .msg-appear { animation: msgIn 250ms ease-out; }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Dropdown animation */
+  .dropdown-menu { animation: dropIn 150ms ease; }
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Pulse for online indicator */
+  .pulse-dot { animation: pulseDot 2s ease-in-out infinite; }
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+}
+
+/* Focus-visible ring for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--industrial-yellow);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
