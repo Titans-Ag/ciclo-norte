@@ -51,7 +51,8 @@ func NewRouter(cfg *config.Config) http.Handler {
 	})))
 
 	// Conversation routes (protected)
-	convHandler := conversation.NewHandler()
+	evoClient := evolution.NewClient(cfg.EvolutionBaseURL, cfg.EvolutionAPIKey)
+	convHandler := conversation.NewHandler(cfg, evoClient)
 	convRouter := http.NewServeMux()
 	convHandler.RegisterRoutes(convRouter)
 	mux.Handle("/api/conversations", jwtMW(convRouter))

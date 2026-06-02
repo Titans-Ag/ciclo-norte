@@ -3,22 +3,33 @@ package conversation
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/Titans-Ag/ciclo-norte/internal/auth"
+	"github.com/Titans-Ag/ciclo-norte/internal/config"
 	"github.com/Titans-Ag/ciclo-norte/internal/db"
 	"github.com/Titans-Ag/ciclo-norte/internal/sse"
 	"github.com/google/uuid"
 )
 
 // Handler is a collection of conversation HTTP handlers.
-type Handler struct{}
+type Handler struct {
+	cfg    *config.Config
+	sender WhatsAppSender
+}
+
+// WhatsAppSender abstracts sending messages to WhatsApp (implemented by evolution.Client).
+type WhatsAppSender interface {
+	SendTextMessage(ctx context.Context, instanceName, toNumber, text string) error
+	SendMediaMessage(ctx context.Context, instanceName, toNumber, mediaType, mediaURL, caption string) error
+}
 
 // NewHandler creates a new Handler.
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(cfg *config.Config, sender WhatsAppSender) *Handler {
+	return &Handler{cfg: cfg, sender: sender}
 }
 
 // getClaims extracts JWT claims or returns an error response.
@@ -243,13 +254,38 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Send to WhatsApp via Evolution API (best effort — log error but don't fail request)
+	go func() {
+		inst, err := GetInstanciaByID(context.Background(), conv.InstanciaWhatsappID)
+		if err != nil {
+			fmt.Printf("send to evolution: get instancia: %v\n", err)
+			return
+		}
+		if h.sender == nil {
+			fmt.Printf("send to evolution: no sender configured\n")
+			return
+		}
+		if msg.MidiaURL != nil && *msg.MidiaURL != "" {
+			caption := ""
+			if msg.Conteudo != nil {
+				caption = *msg.Conteudo
+			}
+			_ = h.sender.SendMediaMessage(context.Background(), inst.EvolutionInstanceName, conv.ClienteTelefone, msg.MidiaTipo, *msg.MidiaURL, caption)
+		} else if msg.Conteudo != nil {
+			_ = h.sender.SendTextMessage(context.Background(), inst.EvolutionInstanceName, conv.ClienteTelefone, *msg.Conteudo)
+		}
+	}()
+
 	sse.PublishNovaMensagem(conv.LojaResponsavelID, map[string]any{
+		"id":          msg.ID,
 		"conversa_id": conv.ID,
-		"mensagem_id": msg.ID,
 		"autor_tipo":  msg.AutorTipo,
 		"autor_nome":  msg.AutorNome,
 		"conteudo":    msg.Conteudo,
 		"midia_tipo":  msg.MidiaTipo,
+		"midia_url":   msg.MidiaURL,
+		"enviada_em":  msg.EnviadaEm,
+		"created_at":  msg.CreatedAt,
 	})
 
 	writeJSON(w, http.StatusCreated, msg)

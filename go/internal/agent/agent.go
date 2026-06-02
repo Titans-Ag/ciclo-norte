@@ -87,12 +87,15 @@ func ProcessConversation(ctx context.Context, cfg *config.Config, convID uuid.UU
 	// Broadcast SSE so frontend sees the agent response in real time
 	if result != nil {
 		sse.PublishNovaMensagem(conv.LojaResponsavelID, map[string]any{
+			"id":          result.MensagemID,
 			"conversa_id": convID,
-			"mensagem_id": result.MensagemID,
 			"autor_tipo":  "agente",
 			"autor_nome":  agente.Nome,
 			"conteudo":    result.Resposta,
 			"midia_tipo":  "text",
+			"midia_url":   nil,
+			"enviada_em":  time.Now().UTC(),
+			"created_at":  time.Now().UTC(),
 		})
 		if result.Transferiu {
 			sse.PublishConversaTransferida(conv.LojaResponsavelID, map[string]any{
@@ -537,12 +540,15 @@ func ProcessMessage(ctx context.Context, cfg *config.Config, req ProcessRequest)
 	// 9. Log event + SSE broadcast
 	_ = conversation.LogEventoAgente(ctx, req.ConversaID, agente.ID, "resposta", map[string]any{"resposta": assistantMsg.Content})
 	sse.PublishNovaMensagem(lojaID, map[string]any{
+		"id":          respID,
 		"conversa_id": req.ConversaID,
-		"mensagem_id": respID,
 		"autor_tipo":  "agente",
 		"autor_nome":  agente.Nome,
 		"conteudo":    assistantMsg.Content,
 		"midia_tipo":  "text",
+		"midia_url":   nil,
+		"enviada_em":  time.Now().UTC(),
+		"created_at":  time.Now().UTC(),
 	})
 
 	return &ProcessResult{

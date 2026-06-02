@@ -12,6 +12,7 @@ import (
 	"github.com/Titans-Ag/ciclo-norte/internal/agent"
 	"github.com/Titans-Ag/ciclo-norte/internal/config"
 	"github.com/Titans-Ag/ciclo-norte/internal/conversation"
+	"github.com/Titans-Ag/ciclo-norte/internal/sse"
 	"github.com/google/uuid"
 )
 
@@ -139,6 +140,19 @@ func (h *Handler) Receive(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to save message")
 		return
 	}
+
+	// Broadcast SSE so frontend sees the inbound message immediately
+	sse.PublishNovaMensagem(conv.LojaResponsavelID, map[string]any{
+		"id":         msg.ID,
+		"conversa_id": conv.ID,
+		"autor_tipo":  msg.AutorTipo,
+		"autor_nome":  msg.AutorNome,
+		"conteudo":    msg.Conteudo,
+		"midia_tipo":  msg.MidiaTipo,
+		"midia_url":   msg.MidiaURL,
+		"enviada_em":  msg.EnviadaEm,
+		"created_at":  msg.CreatedAt,
+	})
 
 	// Invoke AI agent asynchronously
 	go func() {

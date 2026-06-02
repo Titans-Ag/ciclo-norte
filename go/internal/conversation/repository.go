@@ -244,6 +244,33 @@ func GetInstanciaByName(ctx context.Context, name string) (*struct {
 	return &i, nil
 }
 
+// GetInstanciaByID loads an instance by its UUID.
+func GetInstanciaByID(ctx context.Context, id uuid.UUID) (*struct {
+	ID                    uuid.UUID
+	LojaID                uuid.UUID
+	Numero                string
+	EvolutionURL          string
+	EvolutionInstanceName string
+	Status                string
+}, error) {
+	row := db.Pool.QueryRow(ctx, `
+		SELECT id, loja_id, numero_telefone, evolution_base_url, evolution_instance_name, status
+		FROM instancia_whatsapp WHERE id = $1 AND ativo = true`, id)
+	var i struct {
+		ID                    uuid.UUID
+		LojaID                uuid.UUID
+		Numero                string
+		EvolutionURL          string
+		EvolutionInstanceName string
+		Status                string
+	}
+	err := row.Scan(&i.ID, &i.LojaID, &i.Numero, &i.EvolutionURL, &i.EvolutionInstanceName, &i.Status)
+	if err != nil {
+		return nil, fmt.Errorf("get instancia by id: %w", err)
+	}
+	return &i, nil
+}
+
 // --- Loja helpers ---
 
 // GetLojaByID loads a store by ID.
